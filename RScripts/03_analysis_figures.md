@@ -102,17 +102,17 @@ Parameter estimates and confidence intervals
 
 ```r
 emersion.fit <- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
-knitr::kable(emersion.fit)
+knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)
 ```
 
 
 
-term                estimate   std.error   statistic     p.value     conf.low    conf.high
-----------------  ----------  ----------  ----------  ----------  -----------  -----------
-(Intercept)         9.171127   0.5538186   16.559802   0.0000000    8.0587496   10.2835046
-substratecobble    -3.566800   0.8123752   -4.390582   0.0000586   -5.1985034   -1.9350961
-Region.L            1.029013   0.6859089    1.500218   0.1398466   -0.3486759    2.4067014
-Region.Q           -1.461849   0.7245723   -2.017533   0.0490234   -2.9171952   -0.0065025
+|      term       | estimate | std.error | statistic | p.value | conf.low | conf.high |
+|:---------------:|:--------:|:---------:|:---------:|:-------:|:--------:|:---------:|
+|   (Intercept)   |   9.17   |   0.55    |   16.56   |  0.00   |   8.06   |   10.28   |
+| substratecobble |  -3.57   |   0.81    |   -4.39   |  0.00   |  -5.20   |   -1.94   |
+|    Region.L     |   1.03   |   0.69    |   1.50    |  0.14   |  -0.35   |   2.41    |
+|    Region.Q     |  -1.46   |   0.72    |   -2.02   |  0.05   |  -2.92   |   -0.01   |
 
 Model fit of height above MLLW as a function of substrate and region
 
@@ -147,15 +147,15 @@ Parameter estimates and confidence intervals
 
 ```r
 emersion.fit <- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
-knitr::kable(emersion.fit)
+knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)
 ```
 
 
 
-term                 estimate   std.error   statistic   p.value     conf.low    conf.high
-----------------  -----------  ----------  ----------  --------  -----------  -----------
-(Intercept)         3.1116392   0.0792871   39.245230         0    2.9523864    3.2708920
-substratecobble    -0.7457649   0.1163031   -6.412251         0   -0.9793667   -0.5121632
-Region.L            0.6788616   0.0981977    6.913214         0    0.4816258    0.8760975
-Region.Q           -0.8868312   0.1037329   -8.549180         0   -1.0951849   -0.6784776
+|      term       | estimate | std.error | statistic | p.value | conf.low | conf.high |
+|:---------------:|:--------:|:---------:|:---------:|:-------:|:--------:|:---------:|
+|   (Intercept)   |   3.11   |   0.08    |   39.25   |    0    |   2.95   |   3.27    |
+| substratecobble |  -0.75   |   0.12    |   -6.41   |    0    |  -0.98   |   -0.51   |
+|    Region.L     |   0.68   |   0.10    |   6.91    |    0    |   0.48   |   0.88    |
+|    Region.Q     |  -0.89   |   0.10    |   -8.55   |    0    |  -1.10   |   -0.68   |
 

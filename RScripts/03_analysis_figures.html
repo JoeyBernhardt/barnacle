@@ -180,55 +180,55 @@ ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrat
 ## F-statistic: 7.951 on 3 and 50 DF,  p-value: 0.0001968</code></pre>
 <p>Parameter estimates and confidence intervals</p>
 <pre class="r"><code>emersion.fit &lt;- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
-knitr::kable(emersion.fit)</code></pre>
+knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)</code></pre>
 <table>
 <thead>
 <tr class="header">
-<th align="left">term</th>
-<th align="right">estimate</th>
-<th align="right">std.error</th>
-<th align="right">statistic</th>
-<th align="right">p.value</th>
-<th align="right">conf.low</th>
-<th align="right">conf.high</th>
+<th align="center">term</th>
+<th align="center">estimate</th>
+<th align="center">std.error</th>
+<th align="center">statistic</th>
+<th align="center">p.value</th>
+<th align="center">conf.low</th>
+<th align="center">conf.high</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">(Intercept)</td>
-<td align="right">9.171127</td>
-<td align="right">0.5538186</td>
-<td align="right">16.559802</td>
-<td align="right">0.0000000</td>
-<td align="right">8.0587496</td>
-<td align="right">10.2835046</td>
+<td align="center">(Intercept)</td>
+<td align="center">9.17</td>
+<td align="center">0.55</td>
+<td align="center">16.56</td>
+<td align="center">0.00</td>
+<td align="center">8.06</td>
+<td align="center">10.28</td>
 </tr>
 <tr class="even">
-<td align="left">substratecobble</td>
-<td align="right">-3.566800</td>
-<td align="right">0.8123752</td>
-<td align="right">-4.390582</td>
-<td align="right">0.0000586</td>
-<td align="right">-5.1985034</td>
-<td align="right">-1.9350961</td>
+<td align="center">substratecobble</td>
+<td align="center">-3.57</td>
+<td align="center">0.81</td>
+<td align="center">-4.39</td>
+<td align="center">0.00</td>
+<td align="center">-5.20</td>
+<td align="center">-1.94</td>
 </tr>
 <tr class="odd">
-<td align="left">Region.L</td>
-<td align="right">1.029013</td>
-<td align="right">0.6859089</td>
-<td align="right">1.500218</td>
-<td align="right">0.1398466</td>
-<td align="right">-0.3486759</td>
-<td align="right">2.4067014</td>
+<td align="center">Region.L</td>
+<td align="center">1.03</td>
+<td align="center">0.69</td>
+<td align="center">1.50</td>
+<td align="center">0.14</td>
+<td align="center">-0.35</td>
+<td align="center">2.41</td>
 </tr>
 <tr class="even">
-<td align="left">Region.Q</td>
-<td align="right">-1.461849</td>
-<td align="right">0.7245723</td>
-<td align="right">-2.017533</td>
-<td align="right">0.0490234</td>
-<td align="right">-2.9171952</td>
-<td align="right">-0.0065025</td>
+<td align="center">Region.Q</td>
+<td align="center">-1.46</td>
+<td align="center">0.72</td>
+<td align="center">-2.02</td>
+<td align="center">0.05</td>
+<td align="center">-2.92</td>
+<td align="center">-0.01</td>
 </tr>
 </tbody>
 </table>
@@ -256,55 +256,55 @@ knitr::kable(emersion.fit)</code></pre>
 ## F-statistic: 48.75 on 3 and 50 DF,  p-value: 7.099e-15</code></pre>
 <p>Parameter estimates and confidence intervals</p>
 <pre class="r"><code>emersion.fit &lt;- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
-knitr::kable(emersion.fit)</code></pre>
+knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)</code></pre>
 <table>
 <thead>
 <tr class="header">
-<th align="left">term</th>
-<th align="right">estimate</th>
-<th align="right">std.error</th>
-<th align="right">statistic</th>
-<th align="right">p.value</th>
-<th align="right">conf.low</th>
-<th align="right">conf.high</th>
+<th align="center">term</th>
+<th align="center">estimate</th>
+<th align="center">std.error</th>
+<th align="center">statistic</th>
+<th align="center">p.value</th>
+<th align="center">conf.low</th>
+<th align="center">conf.high</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">(Intercept)</td>
-<td align="right">3.1116392</td>
-<td align="right">0.0792871</td>
-<td align="right">39.245230</td>
-<td align="right">0</td>
-<td align="right">2.9523864</td>
-<td align="right">3.2708920</td>
+<td align="center">(Intercept)</td>
+<td align="center">3.11</td>
+<td align="center">0.08</td>
+<td align="center">39.25</td>
+<td align="center">0</td>
+<td align="center">2.95</td>
+<td align="center">3.27</td>
 </tr>
 <tr class="even">
-<td align="left">substratecobble</td>
-<td align="right">-0.7457649</td>
-<td align="right">0.1163031</td>
-<td align="right">-6.412251</td>
-<td align="right">0</td>
-<td align="right">-0.9793667</td>
-<td align="right">-0.5121632</td>
+<td align="center">substratecobble</td>
+<td align="center">-0.75</td>
+<td align="center">0.12</td>
+<td align="center">-6.41</td>
+<td align="center">0</td>
+<td align="center">-0.98</td>
+<td align="center">-0.51</td>
 </tr>
 <tr class="odd">
-<td align="left">Region.L</td>
-<td align="right">0.6788616</td>
-<td align="right">0.0981977</td>
-<td align="right">6.913214</td>
-<td align="right">0</td>
-<td align="right">0.4816258</td>
-<td align="right">0.8760975</td>
+<td align="center">Region.L</td>
+<td align="center">0.68</td>
+<td align="center">0.10</td>
+<td align="center">6.91</td>
+<td align="center">0</td>
+<td align="center">0.48</td>
+<td align="center">0.88</td>
 </tr>
 <tr class="even">
-<td align="left">Region.Q</td>
-<td align="right">-0.8868312</td>
-<td align="right">0.1037329</td>
-<td align="right">-8.549180</td>
-<td align="right">0</td>
-<td align="right">-1.0951849</td>
-<td align="right">-0.6784776</td>
+<td align="center">Region.Q</td>
+<td align="center">-0.89</td>
+<td align="center">0.10</td>
+<td align="center">-8.55</td>
+<td align="center">0</td>
+<td align="center">-1.10</td>
+<td align="center">-0.68</td>
 </tr>
 </tbody>
 </table>
