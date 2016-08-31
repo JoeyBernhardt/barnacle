@@ -98,7 +98,7 @@ summary(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder))
 ## F-statistic: 7.951 on 3 and 50 DF,  p-value: 0.0001968
 ```
 
-Parameter estimates and confidence intervals
+Parameter estimates and confidence intervals for emersion_time_hours ~ substrate + Region
 
 ```r
 emersion.fit <- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
@@ -143,7 +143,7 @@ summary(lm(mean_height ~ substrate + Region, data = emersion_noBoulder))
 ## F-statistic: 48.75 on 3 and 50 DF,  p-value: 7.099e-15
 ```
 
-Parameter estimates and confidence intervals
+Parameter estimates and confidence intervals for height above MLLW as a function of substrate and region
 
 ```r
 emersion.fit <- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)

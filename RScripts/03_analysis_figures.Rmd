@@ -54,7 +54,7 @@ summary(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder))
 
 ```
 
-Parameter estimates and confidence intervals
+Parameter estimates and confidence intervals for emersion_time_hours ~ substrate + Region
 ```{r}
 emersion.fit <- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
 knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)
@@ -66,7 +66,7 @@ summary(lm(mean_height ~ substrate + Region, data = emersion_noBoulder))
 
 ```
 
-Parameter estimates and confidence intervals
+Parameter estimates and confidence intervals for height above MLLW as a function of substrate and region
 ```{r}
 emersion.fit <- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
 knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)

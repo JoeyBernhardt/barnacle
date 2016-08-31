@@ -178,7 +178,7 @@ ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrat
 ## Residual standard error: 2.969 on 50 degrees of freedom
 ## Multiple R-squared:  0.323,  Adjusted R-squared:  0.2824 
 ## F-statistic: 7.951 on 3 and 50 DF,  p-value: 0.0001968</code></pre>
-<p>Parameter estimates and confidence intervals</p>
+<p>Parameter estimates and confidence intervals for emersion_time_hours ~ substrate + Region</p>
 <pre class="r"><code>emersion.fit &lt;- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
 knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)</code></pre>
 <table>
@@ -254,7 +254,7 @@ knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)</code><
 ## Residual standard error: 0.425 on 50 degrees of freedom
 ## Multiple R-squared:  0.7452, Adjusted R-squared:  0.7299 
 ## F-statistic: 48.75 on 3 and 50 DF,  p-value: 7.099e-15</code></pre>
-<p>Parameter estimates and confidence intervals</p>
+<p>Parameter estimates and confidence intervals for height above MLLW as a function of substrate and region</p>
 <pre class="r"><code>emersion.fit &lt;- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
 knitr::kable(emersion.fit, align = 'c', format = 'markdown', digits = 2)</code></pre>
 <table>
