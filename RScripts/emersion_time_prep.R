@@ -1,5 +1,5 @@
 ### calculate emersion time
-install.packages("tidyr")
+
 library(dplyr)
 library(ggplot2)
 library(lubridate)
@@ -7,23 +7,17 @@ library(purrr)
 library(tidyr)
 
 
+barnacle <- read.csv("barnacle_survey_data/survey_barnacle.csv")
+atkinson <- read.csv("tide_data/atkinson_2min.csv")
+fulford <- read.csv("tide_data/fulford_1min.csv")
 
 
-barnacle <- read.csv("survey_barnacle.csv")
-atkinson <- read.csv("atkinson_2min.csv")
-fulford <- read.csv("fulford_1min.csv")
-
-
-vancouver <- barnacle %>% 
-	filter(Region == "Vancouver")
-
+# Gulf Islands data -------------------------------------------------------
 
 gulf <- barnacle %>% 
 	filter(Region == "gulfislands")
 
-mean_height_vancouver <- vancouver %>% 
-	group_by(Site, substrate) %>% 
-	summarise(mean_height = mean(height.above.MLLW))
+
 
 
 mean_height_gulf <- gulf %>% 
@@ -45,196 +39,346 @@ fulford_trim <- fulford %>%
 
 ## create a new column with numbers for minutes
 fulford_trim$minutes <-  seq(1,1440, 1)
-fulford_trim$S1 <-  rep(1.6954150)
-fulford_trim$S2 <-  rep(0.5662483)
-fulford_trim$S3 <-  rep(2.9110116)
-fulford_trim$S4 <-  rep(1.7207259)
-fulford_trim$S5 <-  rep(2.8759237)
-fulford_trim$S6 <-  rep(2.4987813)
-fulford_trim$S7 <-  rep(2.7710828)
-fulford_trim$S8 <-  rep(1.2672109)
-fulford_trim$S9 <-  rep(0.4907108)
-fulford_trim$S10 <-  rep(1.9806030)
-fulford_trim$S11 <-  rep(0.6922696)
-fulford_trim$S12 <-  rep(1.4503138)
-fulford_trim$S13 <-  rep(2.8965473)
-fulford_trim$S14 <-  rep(2.6225591)
-fulford_trim$S15 <-  rep(2.7602922)
-fulford_trim$S16 <-  rep(1.8135591)
-fulford_trim$S17 <-  rep(2.3489827)
 
-## now calculate the daytime minutes above barnacle level
-may_fulford_1 <- fulford_trim %>% 
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+fulford_trim <- fulford_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+## create new columns, one for each site
+col.names <- paste0("S", 1:17)
+
+## fill the columns with NAs
+fulford_trim[, col.names] <- NA
+
+fulford_trim[, col.names] <- rep(mean_height_gulf$mean_height, each = nrow(fulford_trim))
+
+
+## now calculate the daytime minutes above barnacle level, for one site
+may_fulford_1 <- fulford_trim %>% ## tide data
 	filter(minutes > 361 & minutes < 1141) %>% 
 	group_by(Date) %>% 
-	filter(Tide.height < S1) %>% 
+	filter(Tide.height < x) %>% 
 	tally %>% 
 	summarise(mean_minutes_above_barn = mean(n)) 
 may_fulford_1$site <- "S1"
 
 
-### try to make this into a function
-
-may_fulford_2 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S2) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_2$site <- "S2"
-
-
-may_fulford_3 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S3) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_3$site <- "S3"
+## function to count the number of lines where the tide level is below to barnacle level
+m  = NULL
+emersion_time <- function(df, x) {
+	for (i in seq_along(x)) {
+		m[i] <- nrow(subset(df, Tide.height < x[i]))
+		
+	}
+	return(m)
+}
 
 
-may_fulford_4 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S4) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_4$site <- "S4"
-
-may_fulford_5 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S5) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_5$site <- "S5"
+number_of_minutes <- emersion_time(fulford_trim, fulford_trim$Date, mean_height_gulf$mean_height)
 
 
-may_fulford_6 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S6) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_6$site <- "S6"
+d <- mean_height_gulf$mean_height
+
+library(purrr)
+
+by_day <- fulford_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., d)) %>% 
+	as.data.frame 
+	
+by_day$site_number <- rownames(by_day)
+
+by_day_total <- by_day %>% 
+	mutate(total = rowSums(.[1:29]))
 
 
-may_fulford_7 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S7) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_7$site <- "S7"
+# join with gulf island summary -------------------------------------------
 
-may_fulford_8 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S8) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_8$site <- "S8"
+by_day_total_gulf <- left_join(by_day_total, mean_height_gulf)
 
-may_fulford_9 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S9) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_9$site <- "S9"
+by_day_total_gulf %>% 
+	group_by(substrate) %>% 
+	summarise(mean_minutes_above = mean(total)) 
 
-may_fulford_10 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S10) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_10$site <- "S10"
-
-may_fulford_11 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S11) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_11$site <- "S11"
-
-may_fulford_12 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S12) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_12$site <- "S12"
-
-may_fulford_13 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S13) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_13$site <- "S13"
-
-may_fulford_14 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S14) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_14$site <- "S14"
-
-may_fulford_15 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S15) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_15$site <- "S15"
-
-may_fulford_16 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S16) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n))
-may_fulford_16$site <- "S16"
-
-may_fulford_17 <- fulford_trim %>% 
-	filter(minutes > 361 & minutes < 1141) %>%  
-	group_by(Date) %>% 
-	filter(Tide.height < S17) %>% 
-	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
-may_fulford_17$site <- "S17"
-
-#### now bind all the minute dfs together
+by_day_total_gulf %>% 
+	ggplot(., aes(x = Site, y = total, group = as.factor(Date), color = substrate)) + geom_point(aes(shape = Date), size = 8) +
+	ylab("daytime emersion time, minutes") +
+	theme(axis.text=element_text(size=12),
+				axis.title=element_text(size=14,face="bold")) +
+	theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
 
-all_emersion_gulf <- bind_rows(may_fulford_1,
-															 may_fulford_2,
-															 may_fulford_3,
-															 may_fulford_4,
-															 may_fulford_5,
-															 may_fulford_6,
-															 may_fulford_7,
-															 may_fulford_8,
-															 may_fulford_9,
-															 may_fulford_10,
-															 may_fulford_11,
-															 may_fulford_12,
-															 may_fulford_13,
-															 may_fulford_14,
-															 may_fulford_15,
-															 may_fulford_16,
-															 may_fulford_17)
+# Vancouver region data ---------------------------------------------------
+
+vancouver <- barnacle %>% 
+	filter(Region == "Vancouver")
+
+atkinson <- read.csv("tide_data/atkinson_1min_july.csv")
+
+mean_height_vancouver <- vancouver %>% 
+	group_by(Site, substrate, Date) %>% 
+	summarise(mean_height = mean(height.above.MLLW))
 
 
-all_emersion_gulf <- separate(all_emersion_gulf, site, into = c("S", "site_number"), sep = 1) %>% 
-	select(-S)
+mean_height_vancouver$site_number = rownames(mean_height_vancouver)
+
+h <- mean_height_vancouver$mean_height
+
+## take out incomplete days in May
+atkinson_trim <- atkinson %>% 
+	filter(Date != "12-07-25") %>% 
+	filter(Date != "12-08-22") 
+
+## create a new column with numbers for minutes
+atkinson_trim$minutes <-  seq(1,1440, 1)
+
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+atkinson_trim <- atkinson_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+by_day_vancouver <- atkinson_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., h)) %>% 
+	as.data.frame 
+
+by_day_vancouver$site_number <- rownames(by_day_vancouver)
+
+by_day_total_vancouver <- by_day_vancouver %>% 
+	mutate(total = rowSums(.[1:29]))
 
 
-emersion_gulf_sites <- bind_cols(mean_height_gulf, all_emersion_gulf) %>% 
-	as.data.frame()
+# join with Vancouver summary data ----------------------------------------
+
+by_day_vancouver <- left_join(by_day_total_vancouver, mean_height_vancouver)
+
+by_day_vancouver %>% 
+	ggplot(., aes(x = Site, y = total, group = as.factor(Date), color = substrate)) + geom_point(aes(shape = Date), size = 8) +
+	ylab("daytime emersion time, minutes") +
+	theme(axis.text=element_text(size=12),
+				axis.title=element_text(size=14,face="bold")) +
+	theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+ggsave("vancouver_emersion_time.png")
+
+
+
+# Outer Coast region ------------------------------------------------------
+
+outer_coast <- barnacle %>% 
+	filter(Region == "outer coast")
+
+Tofino <- outer_coast %>% 
+	filter(., grepl("Tofino", Site)) 
+
+Bamfield <- outer_coast %>% 
+	filter(., grepl("Bamfield", Site)) 
+
+Ukie <- outer_coast %>% 
+	filter(., grepl("Ukie", Site)) 
+
+Toquart <- outer_coast %>% 
+	filter(., grepl("Toquart", Site)) 
+
+
+
+# Tofino ------------------------------------------------------------------
+
+tofino <- read.csv("tide_data/Tofino_July2012_1min.csv")
+
+mean_height_tofino <- Tofino %>% 
+	group_by(Site, substrate, Date) %>% 
+	summarise(mean_height = mean(height.above.MLLW))
+
+
+mean_height_tofino$site_number = rownames(mean_height_tofino)
+
+t <- mean_height_tofino$mean_height
+
+## take out incomplete days in May
+tofino_trim <- tofino %>% 
+	filter(Date != "12-07-25") %>% 
+	filter(Date != "12-08-22") 
+
+## create a new column with numbers for minutes
+tofino_trim$minutes <-  seq(1,1440, 1)
+
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+tofino_trim <- tofino_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+by_day_tofino <- tofino_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., t)) %>% 
+	as.data.frame 
+
+by_day_tofino$site_number <- rownames(by_day_tofino)
+
+by_day_total_tofino <- by_day_tofino %>% 
+	mutate(total = rowSums(.[1:29]))
+
+by_day_tofino <- left_join(by_day_total_tofino, mean_height_tofino)
+
+
+
+# Toquart -----------------------------------------------------------------
+
+toquart <- read.csv("tide_data/stopper_islands_1min_July2012.csv")
+
+mean_height_toquart <- Toquart %>% 
+	group_by(Site, substrate, Date) %>% 
+	summarise(mean_height = mean(height.above.MLLW))
+
+
+mean_height_toquart$site_number = rownames(mean_height_toquart)
+
+tq <- mean_height_toquart$mean_height
+
+## take out incomplete days in May
+toquart_trim <- toquart %>% 
+	filter(Date != "12-07-25") %>% 
+	filter(Date != "12-08-22") 
+
+## create a new column with numbers for minutes
+toquart_trim$minutes <-  seq(1,1440, 1)
+
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+toquart_trim <- toquart_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+by_day_toquart <- toquart_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., tq)) %>% 
+	as.data.frame 
+
+by_day_toquart$site_number <- rownames(by_day_toquart)
+
+by_day_total_toquart <- by_day_toquart %>% 
+	mutate(total = rowSums(.[1:29]))
+
+by_day_toquart <- left_join(by_day_total_toquart, mean_height_toquart)
+
+
+# Ukie --------------------------------------------------------------------
+
+ukie <- read.csv("tide_data/Ukie_July2012_1min.csv")
+
+mean_height_ukie <- Ukie %>% 
+	group_by(Site, substrate, Date) %>% 
+	summarise(mean_height = mean(height.above.MLLW))
+
+
+mean_height_ukie$site_number = rownames(mean_height_ukie)
+
+u <- mean_height_ukie$mean_height
+
+## take out incomplete days in May
+ukie_trim <- ukie %>% 
+	filter(Date != "12-07-25") %>% 
+	filter(Date != "12-08-22") 
+
+## create a new column with numbers for minutes
+ukie_trim$minutes <-  seq(1,1440, 1)
+
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+ukie_trim <- ukie_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+by_day_ukie <- ukie_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., u)) %>% 
+	as.data.frame 
+
+by_day_ukie$site_number <- rownames(by_day_ukie)
+
+by_day_total_ukie <- by_day_ukie %>% 
+	mutate(total = rowSums(.[1:29]))
+
+by_day_ukie <- left_join(by_day_total_ukie, mean_height_ukie)
+
+
+# Bamfield ----------------------------------------------------------------
+
+bamfield <- read.csv("tide_data/Bamfield_1min_july2012.csv")
+
+mean_height_bamfield <- Bamfield %>% 
+	group_by(Site, substrate, Date) %>% 
+	summarise(mean_height = mean(height.above.MLLW))
+
+
+mean_height_bamfield$site_number = rownames(mean_height_bamfield)
+
+b <- mean_height_bamfield$mean_height
+
+## take out incomplete days in May
+bamfield_trim <- bamfield %>% 
+	filter(Date != "12-07-25") %>% 
+	filter(Date != "12-08-22") 
+
+## create a new column with numbers for minutes
+bamfield_trim$minutes <-  seq(1,1440, 1)
+
+## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+
+bamfield_trim <- bamfield_trim %>% 
+	filter(minutes > 361 & minutes < 1141)
+
+by_day_bamfield <- bamfield_trim %>% 
+	split(.$Date) %>%
+	map( ~ emersion_time(., b)) %>% 
+	as.data.frame 
+
+by_day_bamfield$site_number <- rownames(by_day_bamfield)
+
+by_day_total_bamfield <- by_day_bamfield %>% 
+	mutate(total = rowSums(.[1:29]))
+
+by_day_bamfield <- left_join(by_day_total_bamfield, mean_height_bamfield)
+
+
+# merging all of the emersion times ---------------------------------------
+
+all <- bind_rows(by_day_bamfield, by_day_ukie, by_day_toquart, by_day_tofino, by_day_total_gulf, by_day_vancouver)
+
+all_emersion <- all %>% 
+	select(31:35)
+
+all_emersion %>% 
+	ggplot(data = ., aes(x = mean_height, y = total, group = substrate, color = Site)) + geom_point(aes(shape = substrate), size = 4)
+
+write.csv(all_emersion, "emersion_time_upperlimits.csv")
+
+
+# plots -------------------------------------------------------------------
+
+emersion <- read.csv("emersion_time_upperlimits.csv")
+
+str(emersion)
+
+emersion$Region <- ordered(emersion$Region, levels = c("gulf_islands", "vancouver", "outer_coast"))
+
+emersion %>% 
+	ggplot(data = ., aes(x = mean_height, y = total, group = Region, color = substrate)) + geom_point(aes(shape = Region), size = 4)
+
+
+emersion <- emersion %>% 
+	mutate(emersion_hours = ((total/60)/29))
+
+emersion %>% 
+	filter(., !grepl("Ukie", Site)) %>% 
+	filter(substrate != "boulder") %>% 
+	ggplot(data = ., aes(x = Region, y = emersion_hours, fill = factor(substrate))) + geom_boxplot() + 
+	ylab("daytime emersion time, hours") +
+	theme(axis.text=element_text(size=16),
+				axis.title=element_text(size=14,face="bold")) 
+ggsave("allsites_emersion.png")
+	
+	
+# Extra code section ------------------------------------------------------
+
 
 
 ## plot it!

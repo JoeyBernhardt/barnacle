@@ -1,0 +1,73 @@
+---
+title: "Barnacle upper limit surveys"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+---
+
+
+Load packages
+```{r warning=FALSE, error=FALSE}
+library(dplyr)
+library(ggplot2)
+library(broom)
+```
+
+
+Read in data
+```{r}
+emersion <- read.csv("~/Documents/barnacle/emersion_time_upperlimits.csv")
+emersion_noBoulder <- emersion %>% 
+	filter(substrate != "boulder")
+
+emersion_noBoulder <- emersion_noBoulder %>% 
+	mutate(emersion_time_hours = ((total/60)/29))
+```
+
+
+Plot the upper limit in terms of height above MLLW
+```{r}
+emersion_noBoulder$Region <- ordered(emersion_noBoulder$Region, levels = c("gulf_islands", "vancouver", "outer_coast"))
+
+
+emersion_noBoulder %>% 
+ggplot(data = ., aes(x = Region, y = mean_height, fill = factor(substrate))) + geom_boxplot() + 
+	ylab("height above MLLW, m") +
+	theme(axis.text=element_text(size=16),
+				axis.title=element_text(size=14,face="bold"))
+```
+
+Plot upper limit in terms of emersion time
+```{r}
+emersion_noBoulder %>% 
+ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrate))) + geom_boxplot() + 
+	ylab("hours of emersion time per day") +
+	theme(axis.text=element_text(size=16),
+				axis.title=element_text(size=14,face="bold"))
+```
+
+Model fit of emersion hours as a function of substrate and region
+```{r}
+summary(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder))
+
+```
+
+Parameter estimates and confidence intervals
+```{r}
+emersion.fit <- tidy(lm(emersion_time_hours ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
+knitr::kable(emersion.fit)
+```
+
+Model fit of height above MLLW as a function of substrate and region
+```{r}
+summary(lm(mean_height ~ substrate + Region, data = emersion_noBoulder))
+
+```
+
+Parameter estimates and confidence intervals
+```{r}
+emersion.fit <- tidy(lm(mean_height ~ substrate + Region, data = emersion_noBoulder), conf.int = TRUE)
+knitr::kable(emersion.fit)
+```
+
