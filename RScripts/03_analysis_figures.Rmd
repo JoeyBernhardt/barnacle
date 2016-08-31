@@ -9,7 +9,7 @@ output:
 
 
 Load packages
-```{r warning=FALSE, error=FALSE}
+```{r warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(broom)
