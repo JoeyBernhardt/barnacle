@@ -66,6 +66,137 @@ em <- emersion_noBoulder %>%
 	mutate(isite = ifelse(grepl("28th", Site), "28th", isite)) %>% 
 	mutate(isite = ifelse(grepl("Caulfield", Site), "Caulfield", isite)) %>% 
 	mutate(isite = ifelse(grepl("Welbury", Site), "Welbury", isite)) %>% 
-	mutate(isite = ifelse(grepl("Copper", Site), "Copper", isite))
+	mutate(isite = ifelse(grepl("Copper", Site), "Copper", isite)) %>% 
+	unite(col = "site_substrate", remove = FALSE, isite, substrate)
+
+
+
 	
 all4 <- read_csv("data-processed/all_ibutton_data.csv")
+
+
+
+all5 <- all4 %>% 
+	mutate(day = date(date)) %>% 
+	group_by(substrate, Site, region, ibutton_id, day) %>% 
+	summarise_each(funs(max, mean), temperature) %>% 
+	summarise_each(funs(mean, max), temperature_max) %>% 
+	unite(col = "site_substrate", remove = FALSE, Site, substrate)
+
+
+em2 <- left_join(em, all5, by = "site_substrate")	
+
+em2 %>% 
+	filter(isite == "Sheepfarm") %>% 
+	ggplot(aes(x = temperature_max_mean, y = emersion_time_hours, color = substrate.x)) + geom_point()
+
+
+em2 %>% 
+	filter(isite == "Copper") %>% View
+
+
+all5 %>% 
+	ggplot(aes(x = Site, y = temperature_max_mean, color = substrate)) + geom_boxplot() +
+	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9)
+
+### something weird is going on here...
+## Eagle, sheepfarm, Sooke and Welbury all have higher average daily max temps on bench then on cobble, weird!!
+
+
+all6 <- all4 %>% 
+	filter(!grepl("copy", site)) %>% 
+	mutate(above_25 = ifelse(temperature > 25, 1, 0)) %>% 
+	mutate(above_20 = ifelse(temperature > 20, 1, 0)) %>% 
+	mutate(above_30 = ifelse(temperature > 30, 1, 0)) %>% 
+	mutate(above_35 = ifelse(temperature > 35, 1, 0))
+
+all7 <- all6 %>% 
+	filter(date > "2012-06-30", date < "2012-08-20") %>%
+	group_by(region, Site, substrate, ibutton_id) %>% 
+	summarise_each(funs(sum), above_25, above_20, above_30, above_35) 
+
+all7 %>% 
+	ggplot(aes(x = Site, y = above_35, fill = substrate)) + geom_boxplot() +
+	scale_fill_viridis(discrete = TRUE, begin = 0.2, end = 0.9)
+	
+
+all6 %>% 
+	mutate(day = date(date)) %>% 
+	mutate(hour = hour(date)) %>% 
+	unite(col = "day_hour", day, hour, remove = FALSE) %>%
+	mutate(hour_day = ymd_h(day_hour)) %>%
+	filter(Site == "Sheepfarm") %>% 
+	filter(date > "2012-08-05", date < "2012-08-15") %>%
+	group_by(substrate, hour_day) %>% 
+	summarise_each(funs(mean, max), temperature) %>% 
+	ggplot(aes(x = hour_day, y = temperature_max, color = substrate)) + geom_point() +
+	geom_line() +
+	scale_color_viridis(discrete = TRUE, begin = 0.3, end = 0.9) 
+ggsave("figures/sheepfarm_temps.pdf", width = 20, height = 4)
+	
+fulford <- read_csv("data-raw/fulford_tide.csv") 
+ganges <- read_csv("data-raw/ganges_tide.csv") 
+
+names(fulford) <- "tide"
+names(ganges) <- "tide"
+
+ful2 <- fulford %>% 
+	separate(tide, into = c("date", "height"), sep = " PDT ") %>%
+	mutate(date = as.character(date)) %>% 
+	mutate(day = ymd_hm(date)) %>% 
+	mutate(height = as.numeric(height))
+
+ful3 <- ful2 %>% 
+	filter(day > "2012-08-05", day < "2012-08-15") %>% 
+	mutate(height2 = height*2.3)
+
+gan2 <- ganges %>% 
+	separate(tide, into = c("date", "height"), sep = " PDT ") %>%
+	mutate(date = as.character(date)) %>% 
+	mutate(day = ymd_hm(date)) %>% 
+	mutate(height = as.numeric(height))
+
+gan3 <- gan2 %>% 
+	filter(day > "2012-08-05", day < "2012-08-15") %>% 
+	mutate(height2 = height*2.3)
+
+unique(all6$Site)
+
+all8 <- all6 %>% 
+	mutate(day = date(date)) %>% 
+	mutate(hour = hour(date)) %>% 
+	unite(col = "day_hour", day, hour, remove = FALSE) %>%
+	mutate(hour_day = ymd_h(day_hour)) %>%
+	filter(Site == "Sheepfarm") %>% 
+	filter(date > "2012-08-05", date < "2012-08-15") %>%
+	group_by(substrate, hour_day) %>% 
+	summarise_each(funs(mean, max), temperature) %>% 
+	ungroup()
+
+sheep <- all6 %>% 
+	mutate(day = date(date)) %>% 
+	mutate(hour = hour(date)) %>% 
+	unite(col = "day_hour", day, hour, remove = FALSE) %>%
+	mutate(hour_day = ymd_h(day_hour)) %>%
+	filter(Site == "Welbury") %>% 
+	filter(date > "2012-08-05", date < "2012-08-15") 
+	
+
+str(all8)
+str(ful3)
+
+
+ggplot() + geom_point(aes(color = substrate, x = hour_day, y = temperature), data = sheep) +
+	geom_line(aes(color = substrate, x = hour_day, y = temperature, group = ibutton_id), data = sheep) +
+	geom_line(data = gan3, aes(x = day, y = height2), size = 0.5) +
+	scale_color_viridis(discrete = TRUE, begin = 0.3, end = 0.9) 
+ggsave("figures/sheepfarm_temps.pdf", width = 20, height = 4)
+ggsave("figures/welbury_temps.pdf", width = 20, height = 4)
+
+ful4 <- ful2 %>% 
+	filter(day > "2012-08-05", day < "2012-08-07")
+
+str(ful4)
+
+ful3 %>% 
+	ggplot(aes(x = day, y = height)) + geom_point()

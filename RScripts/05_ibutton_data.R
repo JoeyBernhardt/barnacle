@@ -62,7 +62,7 @@ all4 <- allb3 %>%
 	mutate(Site = ifelse(Site == "Ukee", "Ukie", Site)) %>% 
 	mutate(Site = ifelse(Site == "UkieB", "Ukie", Site)) %>% 
 	mutate(Site = ifelse(Site == "eaglebench", "Eagle", Site)) %>% 
-	filter(date < "2012-09-01")
+	filter(date < "2012-08-29")
 	
 
 all4 %>% 
