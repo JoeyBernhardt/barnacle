@@ -4,7 +4,7 @@ library(stringr)
 library(lubridate)
 
 
-i1 <- read_lines("data-raw/2012_Regional_ibutton_data/Outer_coast/Crab bench 2B7AFE.rtf", skip = 7)
+i1 <- read_lines("data-raw/2012_Regional_ibutton_data/Outer_coast/Crab bench 2BA532.rtf", skip = 7)
 i2 <- as.data.frame(i1) %>% 
 	separate(i1, into = c("date", "C", "temperature"), sep = ",") %>% 
 	mutate(temperature = str_replace(temperature, "\\\\", "")) %>% 
