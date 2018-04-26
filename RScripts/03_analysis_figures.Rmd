@@ -13,12 +13,13 @@ Load packages
 library(dplyr)
 library(ggplot2)
 library(broom)
+library(tidyverse)
 ```
 
 
 Read in data
 ```{r}
-emersion <- read.csv("~/Documents/barnacle/emersion_time_upperlimits.csv")
+emersion <- read_csv("data-processed/emersion_time_upperlimits.csv")
 emersion_noBoulder <- emersion %>% 
 	filter(substrate != "boulder")
 
