@@ -69,7 +69,9 @@ em <- emersion_noBoulder %>%
 	mutate(isite = ifelse(grepl("Caulfield", Site), "Caulfield", isite)) %>% 
 	mutate(isite = ifelse(grepl("Welbury", Site), "Welbury", isite)) %>% 
 	mutate(isite = ifelse(grepl("Copper", Site), "Copper", isite)) %>% 
-	unite(col = "site_substrate", remove = FALSE, isite, substrate)
+	unite(col = "site_substrate", remove = FALSE, isite, substrate) %>% 
+	filter(!is.na(isite)) %>% 
+	select(-Site)
 
 
 
@@ -89,7 +91,7 @@ all5 <- all4 %>%
 all5 %>% 
 	ggplot(aes(x = Site, y = temperature_max_mean, color = substrate)) + geom_point()
 
-em2 <- left_join(em, all5, by = "site_substrate")	
+em2 <- left_join(em, all5, by = c("substrate", "site_substrate"))	
 
 em2 %>% 
 	# filter(isite == "Sheepfarm") %>% 
@@ -99,8 +101,13 @@ em2 %>%
 	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) 
 ggsave("figures/emersion_time_temp.pdf")
 
+mod2 <- lm(emersion_time_hours ~ substrate + Site, data = em2)
+mod3 <- lm(emersion_time_hours ~ substrate + Site + temperature_max_mean, data = em2)
 
+summary(mod2)
+anova(mod2)
 
+AIC(mod2, mod3)
 
 all5 %>% 
 	ggplot(aes(x = Site, y = temperature_max_mean, color = substrate, fill = substrate)) + geom_boxplot() +
