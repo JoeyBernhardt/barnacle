@@ -80,7 +80,7 @@ all5 <- all4 %>%
 	mutate(day = date(date)) %>% 
 	group_by(substrate, Site, region, ibutton_id, day) %>% 
 	summarise_each(funs(max, mean), temperature) %>% 
-	group_by(substrate, Site, region) %>% 
+	group_by(substrate, Site, region, ibutton_id) %>% 
 	summarise_each(funs(mean, max), temperature_max) %>% 
 	unite(col = "site_substrate", remove = FALSE, Site, substrate)
 
