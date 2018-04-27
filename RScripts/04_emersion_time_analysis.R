@@ -23,11 +23,12 @@ emersion_noBoulder %>%
 
 
 emersion_noBoulder %>% 
-	ggplot(data = ., aes(x = Site, y = emersion_time_hours, fill = factor(substrate))) + geom_boxplot() + 
-	ylab("hours of emersion time per day") +
+	ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrate))) + geom_boxplot() + 
+	ylab("Daily emersion time (hours)") +
 	theme(axis.text=element_text(size=16),
-				axis.title=element_text(size=14,face="bold")) + facet_wrap( ~ Site)
-
+				axis.title=element_text(size=14,face="bold")) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/emersion_time_boxplot.pdf")
 
 emersion_noBoulder %>% 
 	ggplot(aes(x = substrate, y = emersion_time_hours, fill = factor(substrate))) + geom_bar(stat = "identity") + 
@@ -35,6 +36,7 @@ emersion_noBoulder %>%
 	theme(axis.text=element_text(size=16),
 				axis.title=element_text(size=14,face="bold")) + facet_wrap( ~ Site) +
 	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/emersion_time_barcharts.pdf", width = 12, height = 8)
 
 
 emersion_noBoulder %>% 
@@ -91,12 +93,13 @@ em2 <- left_join(em, all5, by = "site_substrate")
 
 em2 %>% 
 	# filter(isite == "Sheepfarm") %>% 
-	ggplot(aes(x = temperature_max_mean, y = mean_height, color = substrate.x)) + geom_point() +
-	facet_wrap(~ substrate.x) + geom_smooth(method = "lm")
+	ggplot(aes(x = temperature_max_mean, y = emersion_time_hours, color = substrate.x)) + geom_point() +
+	facet_wrap(~ substrate.x) + geom_smooth(method = "lm") +
+	xlab("Mean daily max temperature (°C)") + ylab("Daily emersion time (hours)") +
+	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) 
+ggsave("figures/emersion_time_temp.pdf")
 
 
-em2 %>% 
-	filter(isite == "Copper") %>% View
 
 
 all5 %>% 
@@ -220,3 +223,54 @@ str(ful4)
 
 ful3 %>% 
 	ggplot(aes(x = day, y = height)) + geom_point()
+
+
+all4sub <- all4 %>% 
+	filter(date > "2012-08-05", date < "2012-08-07")
+
+### plot the temp data from Copper Cove
+ggplot() + geom_point(aes(color = substrate, x = date, y = temperature), data = filter(all4sub, Site == "Copper")) +
+	geom_line(aes(color = substrate, x = date, y = temperature, group = ibutton_id), data = filter(all4sub, Site == "Copper")) +
+	# geom_line(data = ful3, aes(x = day, y = height2), size = 0.5) +
+	scale_color_viridis(discrete = TRUE, begin = 0.3, end = 0.9)
+
+
+### ok let's try to get the monthly maxes
+
+
+all_months <- all4 %>% 
+	mutate(month = month(date)) %>% 
+	group_by(region, Site, substrate, ibutton_id, month) %>% 
+	summarise_each(funs(max), temperature) %>% 
+	group_by(region, Site, substrate, ibutton_id) %>% 
+	summarise_each(funs(max), temperature) 
+
+all_months %>% 
+	ggplot(aes(x = Site, y = temperature, color = substrate, fill = substrate)) + geom_boxplot() +
+	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.5, end = 0.9)
+	
+
+### now let's try to see if the cobbles heat up faster
+
+all_change <- all4 %>% 
+	group_by(region, Site, substrate, ibutton_id) %>% 
+	arrange(date) %>% 
+	mutate(temp_change = temperature - lag(temperature)) %>% 
+	filter(!is.na(temp_change))
+
+?lag
+
+max_change <- all_change %>% 
+	mutate(month = month(date)) %>%
+	group_by(region, Site, substrate, ibutton_id, month) %>% 
+	summarise_each(funs(max), temp_change) %>% 
+	group_by(region, Site, substrate, ibutton_id) %>%
+	summarise_each(funs(max), temp_change)
+	
+	
+max_change %>% 
+	ggplot(aes(x = Site, y = temp_change, color = substrate, fill = substrate)) + geom_boxplot() +
+	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.5, end = 0.9)
+	
