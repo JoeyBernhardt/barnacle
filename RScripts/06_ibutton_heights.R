@@ -11,10 +11,19 @@ hi <- read_xlsx("data-raw/ibutton_heights.xlsx") %>%
 
 
 sheep_ibutton_heights <- hi %>% 
-	filter(str_detect(pattern = "ibutton", string = replicate)) %>% 
+	filter(str_detect(pattern = "ibutton", string = replicate)) %>% View
 	filter(site == "SheepfarmGI") 
 
 
 sheep_ibutton_heights %>% 
 	group_by(substrate) %>% 
 	summarise_each(funs(mean, max, min), height_above_mllw)
+
+ibutton_heights <- hi %>% 
+	filter(str_detect(pattern = "ibutton", string = replicate)) 
+
+unique(ibutton_heights$site)
+
+
+ibutton_heights %>% 
+	filter(str_detect(pattern = "Sookes", string = site)) %>% View
