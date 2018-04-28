@@ -283,11 +283,19 @@ sheep_emersed <- all_sheep2 %>%
 				 above0 = ifelse(temperature > 0, 1, 0))
 
 
-sheep_emersed %>% 
+sheep_dh <- sheep_emersed %>% 
 	group_by(substrate, ibutton_id) %>% 
 	summarise_each(funs(sum), above20, above30) %>% 
 	mutate(dh20 = ifelse(substrate == "cobble", above20/127, above20/306)) %>% 
-	mutate(dh30 = ifelse(substrate == "cobble", above30/127, above30/306)) %>% View
+	mutate(dh30 = ifelse(substrate == "cobble", above30/127, above30/306))
+
+
+sheep_emersed %>% 
+	ggplot(aes(x = temperature, color = substrate, fill = substrate)) + geom_density(alpha = 0.4) +
+	scale_color_viridis(discrete = TRUE, begin = 0.2, end = 0.7) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.2, end = 0.7) +
+	xlab("Temperature (°C)") + ylab("Density")
+ggsave("figures/sheepfarm_density.pdf", width = 7, height = 5)
 
 all4sub <- all4 %>% 
 	filter(date > "2012-08-05", date < "2012-08-07")
