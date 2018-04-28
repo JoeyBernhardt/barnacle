@@ -206,19 +206,32 @@ sheep <- all4 %>%
 	mutate(hour = hour(date)) %>% 
 	unite(col = "day_hour", day, hour, remove = FALSE) %>%
 	mutate(hour_day = ymd_h(day_hour)) %>%
-	filter(Site == "Sooke") %>% 
-	filter(date > "2012-08-05", date < "2012-08-29") 
+	filter(Site == "Sheepfarm") %>% 
+	filter(date > "2012-08-01", date < "2012-08-29") 
 ful3 <- ful2 %>% 
 	mutate(height2 = height*2.3) %>% 
-	filter(date > "2012-08-05", date < "2012-08-29") 
+	filter(date > "2012-08-01", date < "2012-08-29") %>% 
+	mutate(height_m = height*0.3048) %>% 
+	mutate(height_s = height_m*5) %>% 
+	mutate(hour = hour(day)) %>% 
+	mutate(daytime = ifelse(hour > 7 & hour < 19, "daytime", "nighttime"))
+gan3 <- gan2 %>% 
+	filter(day > "2012-08-01", day < "2012-08-29") %>% 
+	mutate(height2 = height*2.3) %>% 
+	mutate(height_m = height*0.3048) %>% 
+	mutate(height_s = height_m*5)
 	
 
 ggplot() + geom_point(aes(color = substrate, x = hour_day, y = temperature), data = sheep) +
 	geom_line(aes(color = substrate, x = hour_day, y = temperature, group = ibutton_id), data = sheep) +
-	geom_line(data = ful3, aes(x = day, y = height2), size = 0.5) +
-	scale_color_viridis(discrete = TRUE, begin = 0.3, end = 0.9) +
-	geom_hline(yintercept = 10) +
-	geom_hline(yintercept = 17)
+	geom_point(data = ful3, aes(x = day, y = height_s, color = daytime), size = 0.2) +
+	scale_color_brewer(type = "div", palette = 4) +
+	geom_hline(yintercept = 2.756746*5, color = "black") +
+	geom_hline(yintercept = 2.636746*5, color = "black") +
+	geom_hline(yintercept = 2.946746*5, color = "black") +
+	geom_hline(yintercept = 2.116746*5, color = "grey") +
+	geom_hline(yintercept = 2.076746*5, color = "grey") +
+	geom_hline(yintercept = 2.036746*5, color = "grey")
 ggsave("figures/sheepfarm_temps.pdf", width = 20, height = 4)
 ggsave("figures/welbury_temps.pdf", width = 20, height = 4)
 ggsave("figures/sookes_temps.pdf", width = 20, height = 4)
@@ -226,11 +239,55 @@ ggsave("figures/sookes_temps.pdf", width = 20, height = 4)
 ful4 <- ful2 %>% 
 	filter(day > "2012-08-05", day < "2012-08-07")
 
-str(ful4)
 
-ful3 %>% 
-	ggplot(aes(x = day, y = height)) + geom_point()
+### ok for the sheepfarm ibutton data, let's try to extract only the points where the water is below the ibutton and it's daytime.
 
+
+
+sheep_date <- sheep %>% 
+	rename(day_merge = date)
+
+ful_date <- ful3 %>% 
+	rename(day_merge = day)
+
+
+all_sheep <- left_join(sheep_date, ful_date, by = "day_merge")
+
+all_sheep2 <- all_sheep %>% 
+	# filter(daytime == "daytime") %>% 
+	mutate(emersed = NA) %>% 
+	mutate(emersed = case_when(substrate == "cobble" & height_m < 2.04 ~ "emersed",
+														 substrate == "bench" & height_m < 2.64 ~ "emersed",
+														 substrate == "cobble" & height_m > 2.04 ~ "submerged",
+														 substrate == "bench" & height_m > 2.64 ~ "emersed")) 
+
+ggplot() + geom_point(aes(color = emersed, x = hour_day, y = temperature, shape = substrate), data = all_sheep2) +
+	geom_line(aes(color = emersed, x = hour_day, y = temperature, group = ibutton_id), data = all_sheep2) +
+	# geom_point(data = all_sheep2, aes(x = hour_day, y = height_s, color = daytime), size = 0.2) +
+	# scale_color_brewer(type = "div") +
+	# scale_color_manual(type = "div") +
+	geom_hline(yintercept = 2.756746*5, color = "black") +
+	geom_hline(yintercept = 2.636746*5, color = "black") +
+	geom_hline(yintercept = 2.946746*5, color = "black") +
+	geom_hline(yintercept = 2.116746*5, color = "grey") +
+	geom_hline(yintercept = 2.076746*5, color = "grey") +
+	geom_hline(yintercept = 2.036746*5, color = "grey")
+ggsave("figures/sheepfarm_temps_emersion.pdf", width = 20, height = 4)
+
+
+
+sheep_emersed <- all_sheep2 %>% 
+	filter(emersed == "emersed", daytime == "daytime") %>% 
+	mutate(above20 = ifelse(temperature > 20, 1, 0),
+				 above30 = ifelse(temperature > 30, 1, 0),
+				 above0 = ifelse(temperature > 0, 1, 0))
+
+
+sheep_emersed %>% 
+	group_by(substrate, ibutton_id) %>% 
+	summarise_each(funs(sum), above20, above30) %>% 
+	mutate(dh20 = ifelse(substrate == "cobble", above20/127, above20/306)) %>% 
+	mutate(dh30 = ifelse(substrate == "cobble", above30/127, above30/306)) %>% View
 
 all4sub <- all4 %>% 
 	filter(date > "2012-08-05", date < "2012-08-07")
