@@ -39,6 +39,15 @@ emersion_noBoulder %>%
 ggsave("figures/emersion_time_barcharts.pdf", width = 12, height = 8)
 
 
+emersion <- emersion_noBoulder %>% 
+	mutate(Date = str_replace(Date, pattern = "Sept", replacement = "Sep")) %>% 
+	mutate(date = mdy(Date)) 
+
+emersion %>% 
+	ggplot(aes(x = date, y = mean_height)) + geom_point() +
+	facet_wrap( ~ Site + substrate, scales = "free")
+
+
 emersion_noBoulder %>% 
 	ggplot(aes(x = substrate, y = emersion_time_hours, color = factor(substrate))) + geom_point() + 
 	ylab("hours of emersion time per day") +
@@ -256,10 +265,10 @@ all_sheep <- left_join(sheep_date, ful_date, by = "day_merge")
 all_sheep2 <- all_sheep %>% 
 	# filter(daytime == "daytime") %>% 
 	mutate(emersed = NA) %>% 
-	mutate(emersed = case_when(substrate == "cobble" & height_m < 2.04 ~ "emersed",
-														 substrate == "bench" & height_m < 2.64 ~ "emersed",
-														 substrate == "cobble" & height_m > 2.04 ~ "submerged",
-														 substrate == "bench" & height_m > 2.64 ~ "emersed")) 
+	mutate(emersed = case_when(substrate == "cobble" & height_m < 2.036746 ~ "emersed",
+														 substrate == "bench" & height_m < 2.636746 ~ "emersed",
+														 substrate == "cobble" & height_m > 2.036746 ~ "submerged",
+														 substrate == "bench" & height_m > 2.636746 ~ "emersed")) 
 
 ggplot() + geom_point(aes(color = emersed, x = hour_day, y = temperature, shape = substrate), data = all_sheep2) +
 	geom_line(aes(color = emersed, x = hour_day, y = temperature, group = ibutton_id), data = all_sheep2) +
@@ -291,6 +300,7 @@ sheep_dh <- sheep_emersed %>%
 
 
 sheep_emersed %>% 
+	filter(date > "2012-08-01", date < "2012-08-24") %>% 
 	ggplot(aes(x = temperature, color = substrate, fill = substrate)) + geom_density(alpha = 0.4) +
 	scale_color_viridis(discrete = TRUE, begin = 0.2, end = 0.7) +
 	scale_fill_viridis(discrete = TRUE, begin = 0.2, end = 0.7) +

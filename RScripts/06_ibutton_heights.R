@@ -20,10 +20,26 @@ sheep_ibutton_heights %>%
 	summarise_each(funs(mean, max, min), height_above_mllw)
 
 ibutton_heights <- hi %>% 
-	filter(str_detect(pattern = "ibutton", string = replicate)) 
+	filter(str_detect(pattern = "ibutton", string = replicate)) %>% 
+	mutate(tide_site = case_when(site == "WelburyGI" ~ "Welbury",
+															 site == "SookesGI1" ~ "Sooke",
+															 site == "SookesGI2" ~ "Sooke",
+															 site == "EagleCoveGI" ~ "Eagle",
+															 site == "SheepfarmGI" ~ "Sheepfarm",
+															 site == "MotelTofino" ~ "Sketchy",
+															 site == "CrabInnTofino" ~ "Crab",
+															 site == "AquariumUkie1" ~ "Ukie",
+															 site == "ToquartBay" ~ "Toquart",
+															 site == "28thVan" ~ "28th",
+															 site == "CaulfieldCoveVan" ~ "Caulfield",
+															 site == "WhytecliffVan" ~ "Whyte",
+															 site == "CopperCoveVan" ~ "Copper"))
 
-unique(ibutton_heights$site)
 
+unique(ibutton_heights$tide_site)
 
-ibutton_heights %>% 
-	filter(str_detect(pattern = "Sookes", string = site)) %>% View
+ih_sum <- ibutton_heights %>% 
+	group_by(substrate, tide_site) %>% 
+	summarise_each(funs(min, mean), height_above_mllw)
+
+write_csv(ih_sum, "data-processed/ibutton_heights_summary.csv")
