@@ -7,9 +7,9 @@ library(purrr)
 library(tidyr)
 
 
-barnacle <- read.csv("barnacle_survey_data/survey_barnacle.csv")
-atkinson <- read.csv("tide_data/atkinson_2min.csv")
-fulford <- read.csv("tide_data/fulford_1min.csv")
+barnacle <- read_csv("data-raw/survey_barnacle_sheep_updated.csv")
+atkinson <- read_csv("tide_data/atkinson_2min.csv")
+fulford <- read_csv("tide_data/fulford_1min.csv")
 
 
 # Gulf Islands data -------------------------------------------------------
