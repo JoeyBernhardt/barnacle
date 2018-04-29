@@ -71,7 +71,7 @@ barn_emersion <- barn_split %>%
 
 barnacle_emersion_times <- left_join(barn_emersion, barnacle2, by = "obs_id")
 
-write_csv(barnacle_emersion_times, "data-processed/barnacle_emersion_times.csv")
+write_csv(barnacle_emersion_times, "data-processed/barnacle_emersion_times.csv") ## just note that I used Ukie tides for the bamfield site, come back and fix that!
 
 
 # Gulf Islands data -------------------------------------------------------

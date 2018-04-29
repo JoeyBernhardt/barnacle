@@ -5,6 +5,30 @@ library(viridis)
 
 
 emersion <- read_csv("data-processed/emersion_time_upperlimits.csv")
+emersion2 <- read_csv("data-processed/barnacle_emersion_times.csv") %>% 
+	filter(substrate != "boulder")
+
+emersion3 <- emersion2 %>% 
+	mutate(site_rename = case_when(grepl("Ruckle", site) ~ "ruckle",
+																 grepl("Welbury", site) ~ "welbury",
+																 grepl("Sookes", site) ~ "sooke",
+																 grepl("Sheep", site) ~ "sheep",
+																 grepl("Eagle", site) ~ "eagle",
+																 grepl("Crab", site) ~ "crab",
+																 grepl("Toquart", site) ~ "toquart",
+																 grepl("Uk", site) ~ "ukie",
+																 grepl("Motel", site) ~ "sketchy",
+																 grepl("Bios", site) ~ "biosphere",
+																 grepl("Copper", site) ~ "copper",
+																 grepl("Whyte", site) ~ "whytecliff",
+																 grepl("28", site) ~ "28th",
+																 grepl("Caul", site) ~ "caulfield",
+																 grepl("Bam", site) ~ "bamfield")) %>% 
+	mutate(date = str_replace(pattern = "Sept", replacement = "Sep", string = date)) %>% 
+	mutate(date = mdy(date))
+
+
+
 emersion_noBoulder <- emersion %>% 
 	filter(substrate != "boulder")
 
@@ -28,7 +52,23 @@ emersion_noBoulder %>%
 	theme(axis.text=element_text(size=16),
 				axis.title=element_text(size=14,face="bold")) +
 	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
-ggsave("figures/emersion_time_boxplot.pdf")
+ggsave("figures/emersion_time_boxplot.pdf", width = 6, height = 4)
+
+emersion3 %>% 
+	ggplot(data = ., aes(x = region, y = hours_emersed, fill = factor(substrate))) + geom_boxplot() + 
+	ylab("Daily emersion time (hours)") +
+	theme(axis.text=element_text(size=16),
+				axis.title=element_text(size=14,face="bold")) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/emersion_time_boxplot2.pdf", width = 6, height = 4)
+
+
+
+emersion3 %>% 
+	ggplot(aes(x = date, y = hours_emersed)) + geom_point() +
+	facet_wrap( ~ site_rename + substrate, scales = "free")
+ggsave("figures/emersion_times_summer.pdf", width = 12, height = 12)
+
 
 emersion_noBoulder %>% 
 	ggplot(aes(x = substrate, y = emersion_time_hours, fill = factor(substrate))) + geom_bar(stat = "identity") + 
