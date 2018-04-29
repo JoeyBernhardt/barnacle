@@ -11,25 +11,89 @@ barnacle <- read_csv("data-raw/survey_barnacle_sheep_updated.csv")
 atkinson <- read_csv("tide_data/atkinson_2min.csv")
 fulford <- read_csv("tide_data/fulford_1min.csv")
 
+tides <- read_csv("data-processed/all_sites_1min_tides.csv") %>% 
+	mutate(hour = hour(date)) %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	mutate(year = 2012) %>% 
+	unite(col = month_day_year, month, day, year, remove = FALSE) %>% 
+	mutate(month_day_year = mdy(month_day_year))
+
+tides_daytime <- tides %>%
+	mutate(minute = 1) %>% 
+	filter(hour > 6, hour < 20) 
+
+unique(barnacle$Site)
+unique(tides$site)
+
+### get the barnacle data aligned with the tide data
+
+barnacle2 <- barnacle %>% 
+	mutate(tide_site = case_when(Site %in% c("RuckleGI", "SheepfarmGI1", "SheepfarmGI2",
+																					 "SheepfarmGI3", "EaglecoveGI", "SookesGI", "SookesGI2",
+																					 "EaglecoveGI", "EagleCoveGI", "SheeparmGI") ~ "fulford",
+															 grepl("Welbury", Site) ~ "ganges",
+				 											grepl("Ukie", Site) ~ "ucluelet",
+															 grepl("Toquart", Site) ~ "stopper",
+															 grepl("Tofino", Site) ~ "tofino",
+															 grepl("Van", Site) ~ "atkinson",
+															 grepl("Sheep", Site) ~ "fulford",
+															 grepl("Sooke", Site) ~ "fulford",
+															 grepl("Bamfield", Site) ~ "ucluelet")) %>% 
+	mutate(obs_id = rownames(.)) %>% 
+	clean_names()
+
+
+
+df1 <- barnacle2 %>% 
+	filter(obs_id == "101")
+
+emersion_function <- function(df) {
+	hours_emersed <- tides_daytime %>% 
+		filter(site == df$tide_site) %>%
+		filter(height < df$height_above_mllw[[1]]) %>%
+		group_by(month_day_year) %>% 
+		summarise_each(funs(sum), minute) %>% 
+		summarise_each(funs(mean), minute) %>% 
+		mutate(hours_emersed = minute/60)
+	
+	return(hours_emersed)
+}	
+
+
+
+barn_split <- barnacle2 %>% 
+	split(.$obs_id)
+
+barn_emersion <- barn_split %>% 
+	map_df(emersion_function, .id = "obs_id") 
+
+
+barnacle_emersion_times <- left_join(barn_emersion, barnacle2, by = "obs_id")
+
+write_csv(barnacle_emersion_times, "data-processed/barnacle_emersion_times.csv")
+
 
 # Gulf Islands data -------------------------------------------------------
 
-gulf <- barnacle %>% 
-	filter(Region == "gulfislands")
 
+View(gulf)
 
-
+min(gulf$height.above.MLLW)
+max(gulf$height.above.MLLW)
 
 mean_height_gulf <- gulf %>% 
-	filter(Site != "SheepfarmGI") %>% 
+	# filter(Site != "SheepfarmGI") %>% 
 	group_by(Site, substrate, Date) %>% 
 	summarise(mean_height = mean(height.above.MLLW)) 
+
+View(mean_height_gulf)
 
 
 mean_height_gulf$site_number = rownames(mean_height_gulf)
 
 ## turn Time column into the right format
-fulford$Time <- hm(fulford$Time)
+# fulford$Time <- hm(fulford$Time)
 
 
  ## take out incomplete days in May
@@ -40,19 +104,26 @@ fulford_trim <- fulford %>%
 ## create a new column with numbers for minutes
 fulford_trim$minutes <-  seq(1,1440, 1)
 
+60*24
+
+fulford_trim$minute <- minute(fulford_trim$Time)
+
 ## remove all the time points that are not between 6am and 7pm (i.e. daytime hours)
+View(fulford_trim)
+
 
 fulford_trim <- fulford_trim %>% 
 	filter(minutes > 361 & minutes < 1141)
 
 ## create new columns, one for each site
-col.names <- paste0("S", 1:17)
+col.names <- paste0("S", 1:19)
 
 ## fill the columns with NAs
 fulford_trim[, col.names] <- NA
 
 fulford_trim[, col.names] <- rep(mean_height_gulf$mean_height, each = nrow(fulford_trim))
 
+View(fulford_trim)
 
 ## now calculate the daytime minutes above barnacle level, for one site
 may_fulford_1 <- fulford_trim %>% ## tide data
@@ -60,10 +131,10 @@ may_fulford_1 <- fulford_trim %>% ## tide data
 	group_by(Date) %>% 
 	filter(Tide.height < x) %>% 
 	tally %>% 
-	summarise(mean_minutes_above_barn = mean(n)) 
+	summarise(mean_minutes_above_barn = mean(n))
 may_fulford_1$site <- "S1"
 
-
+View(may_fulford_1)
 ## function to count the number of lines where the tide level is below to barnacle level
 m  = NULL
 emersion_time <- function(df, x) {
@@ -84,9 +155,11 @@ library(purrr)
 
 by_day <- fulford_trim %>% 
 	split(.$Date) %>%
-	map( ~ emersion_time(., d)) %>% 
+	map_df( ~ emersion_time(., d)) %>% 
 	as.data.frame 
 	
+
+View(by_day)
 by_day$site_number <- rownames(by_day)
 
 by_day_total <- by_day %>% 
