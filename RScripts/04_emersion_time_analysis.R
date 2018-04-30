@@ -55,13 +55,31 @@ emersion_noBoulder %>%
 ggsave("figures/emersion_time_boxplot.pdf", width = 6, height = 4)
 
 emersion3 %>% 
+	mutate(time_point = case_when(date < "2012-08-01" ~ "early_summer",
+																date > "2012-08-01" ~ "late_summer")) %>% 
 	ggplot(data = ., aes(x = region, y = hours_emersed, fill = factor(substrate))) + geom_boxplot() + 
 	ylab("Daily emersion time (hours)") +
 	theme(axis.text=element_text(size=16),
 				axis.title=element_text(size=14,face="bold")) +
-	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) + facet_wrap( ~ time_point)
 ggsave("figures/emersion_time_boxplot2.pdf", width = 6, height = 4)
+ggsave("figures/emersion_time_boxplot3.pdf", width = 10, height = 4)
 
+
+late_summer <- emersion3 %>% 
+	mutate(time_point = case_when(date < "2012-08-01" ~ "early_summer",
+																date > "2012-08-01" ~ "late_summer")) %>% 
+	filter(time_point == "late_summer")
+
+
+ls_means <- late_summer %>% 
+	group_by(region, site_rename, substrate) %>% 
+	summarise_each(funs(mean), hours_emersed)
+
+
+mod1 <- lm(hours_emersed ~ substrate*region, data = ls_means)
+summary(mod1)
+anova(mod1)
 
 
 emersion3 %>% 
