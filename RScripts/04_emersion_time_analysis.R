@@ -135,10 +135,11 @@ time_above_thresholds <- daytime_em %>%
 	mutate(above35 = ifelse(temperature > 35, 1, 0)) %>% 
 	mutate(above40 = ifelse(temperature > 40, 1, 0)) %>% 
 	mutate(above45 = ifelse(temperature > 45, 1, 0)) %>% 
-	group_by(site_rename, substrate, month_day, ibutton_id) %>% 
+	gather(key = threshold, value = hours, 19:24) %>% View
+	group_by(site_rename, substrate, month_day, ibutton_id, region) %>% 
 	summarise_each(funs(sum), contains("above")) %>% 
-	group_by(site_rename, substrate) %>% 
-	summarise_each(funs(mean), contains("above")) %>% 
+	group_by(site_rename, substrate, region) %>% 
+	summarise_each(funs(mean, std.error), contains("above")) %>% 
 	select(-contains("height"))
 
 
@@ -149,9 +150,9 @@ min.mean.sd.max <- function(x) {
 }
 
 
-time_above_thresholds %>% 
-	gather(key = threshold, value = hours, contains("above")) %>% 
-	ungroup() %>% 
+time_above_thresholds %>% View
+	group_by(site_rename, substrate, threshold) %>%
+	
 	ggplot(aes(x = substrate, y = hours, color = substrate)) +
 	stat_summary(fun.data = min.mean.sd.max, geom = "boxplot") +
 	facet_wrap( ~ threshold, scales = "free") +
@@ -261,15 +262,19 @@ emersion5 %>%
 	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
 																date < "2012-08-1" ~ "Beginning of summer")) %>% 
 	# filter(time_point == "End of summer") %>% 
-	ggplot(aes(x = substrate, y = hours_emersed, color = substrate)) + 
-	# geom_boxplot() +
-	stat_summary(fun.data = min.mean.sd.max, geom = "boxplot") +
+	group_by(substrate, time_point, region, site_rename) %>% 
+	summarise_each(funs(mean), hours_emersed) %>% 
+	group_by(substrate, time_point, region) %>% 
+	summarise_each(funs(mean, std.error), hours_emersed) %>% 
+	ggplot(aes(x = substrate, y = hours_emersed_mean, color = substrate)) + 
+	geom_point(size = 3) + geom_errorbar(aes(ymin = hours_emersed_mean - hours_emersed_std.error,
+																	 ymax = hours_emersed_mean + hours_emersed_std.error), width = 0.2) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
 	facet_wrap( ~ region + time_point, nrow = 3, ncol = 2) +
 xlab("") + ylab("Daytime hours emersed (per day)") +
 	theme(strip.background = element_rect(colour="white", fill="white")) 
 ggsave("figures/emersion_hours_region_color2.pdf", width = 6, height = 8)
-
+ggsave("figures/emersion_hours_region_color_point.pdf", width = 6, height = 8)
 
 
 emersion5 %>% 
