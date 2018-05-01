@@ -2,6 +2,10 @@ library(cowplot)
 library(broom)
 library(tidyverse)
 library(viridis)
+library(plotrix)
+
+
+# read in data ------------------------------------------------------------
 
 
 emersion <- read_csv("data-processed/emersion_time_upperlimits.csv")
@@ -25,34 +29,38 @@ emersion3 <- emersion2 %>%
 																 grepl("Caul", site) ~ "caulfield",
 																 grepl("Bam", site) ~ "bamfield")) %>% 
 	mutate(date = str_replace(pattern = "Sept", replacement = "Sep", string = date)) %>% 
-	mutate(date = mdy(date))
+	mutate(date = mdy(date)) %>% 
+	mutate(region = case_when(grepl("gulfislands", region) ~ "Gulf Islands",
+														grepl("outer coast", region) ~ "Outer Coast",
+														grepl("Vancouver", region) ~ "Vancouver"))
+	
 
 
 
-emersion_noBoulder <- emersion %>% 
-	filter(substrate != "boulder")
-
-emersion_noBoulder <- emersion_noBoulder %>% 
-	mutate(emersion_time_hours = ((total/60)/29)) ## don't know why we divide by 29 here...look back into this
-
-
-emersion_noBoulder$Region <- ordered(emersion_noBoulder$Region, levels = c("gulf_islands", "vancouver", "outer_coast"))
-
-
-emersion_noBoulder %>% 
-	ggplot(data = ., aes(x = Region, y = mean_height, fill = factor(substrate))) + geom_boxplot() + 
-	ylab("height above MLLW, m") +
-	theme(axis.text=element_text(size=16),
-				axis.title=element_text(size=14,face="bold"))
-
-
-emersion_noBoulder %>% 
-	ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrate))) + geom_boxplot() + 
-	ylab("Daily emersion time (hours)") +
-	theme(axis.text=element_text(size=16),
-				axis.title=element_text(size=14,face="bold")) +
-	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
-ggsave("figures/emersion_time_boxplot.pdf", width = 6, height = 4)
+# emersion_noBoulder <- emersion %>% 
+# 	filter(substrate != "boulder")
+# 
+# emersion_noBoulder <- emersion_noBoulder %>% 
+# 	mutate(emersion_time_hours = ((total/60)/29)) ## don't know why we divide by 29 here...look back into this
+# 
+# 
+# emersion_noBoulder$Region <- ordered(emersion_noBoulder$Region, levels = c("gulf_islands", "vancouver", "outer_coast"))
+# 
+# 
+# emersion_noBoulder %>% 
+# 	ggplot(data = ., aes(x = Region, y = mean_height, fill = factor(substrate))) + geom_boxplot() + 
+# 	ylab("height above MLLW, m") +
+# 	theme(axis.text=element_text(size=16),
+# 				axis.title=element_text(size=14,face="bold"))
+# 
+# 
+# emersion_noBoulder %>% 
+# 	ggplot(data = ., aes(x = Region, y = emersion_time_hours, fill = factor(substrate))) + geom_boxplot() + 
+# 	ylab("Daily emersion time (hours)") +
+# 	theme(axis.text=element_text(size=16),
+# 				axis.title=element_text(size=14,face="bold")) +
+# 	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+# ggsave("figures/emersion_time_boxplot.pdf", width = 6, height = 4)
 
 emersion3 %>% 
 	mutate(time_point = case_when(date < "2012-08-01" ~ "early_summer",
@@ -81,12 +89,211 @@ mod1 <- lm(hours_emersed ~ substrate*region, data = ls_means)
 summary(mod1)
 anova(mod1)
 
+library(visreg)
+visreg(fit = mod1)
+
+
 
 emersion3 %>% 
 	ggplot(aes(x = date, y = hours_emersed)) + geom_point() +
 	facet_wrap( ~ site_rename + substrate, scales = "free")
 ggsave("figures/emersion_times_summer.pdf", width = 12, height = 12)
 
+### bring in temperature data
+unique(emersion3$site_rename)
+
+temps <- read_csv("data-processed/all_temps_w_tides.csv")
+daytime_em <- temps %>% 
+	filter(emersed == "emersed" & daytime == "daytime") 
+
+daytime_summary <- daytime_em %>% 
+	mutate(region = as.character(region)) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(mean, max, median), temperature) 
+	
+	View(daytime_summary)
+
+setdiff(unique(emersion4$site_rename),unique(daytime_summary$site_rename))
+
+daytime_max <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	group_by(site_rename, substrate, month_day) %>% 
+	summarise_each(funs(max), temperature) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(mean), temperature)
+
+time_above_thresholds <- daytime_em %>%
+	mutate(minute = 1) %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	mutate(above20 = ifelse(temperature > 20, 1, 0)) %>% 
+	mutate(above25 = ifelse(temperature > 25, 1, 0)) %>% 
+	mutate(above30 = ifelse(temperature > 30, 1, 0)) %>% 
+	mutate(above35 = ifelse(temperature > 35, 1, 0)) %>% 
+	mutate(above40 = ifelse(temperature > 40, 1, 0)) %>% 
+	mutate(above45 = ifelse(temperature > 45, 1, 0)) %>% 
+	group_by(site_rename, substrate, month_day, ibutton_id) %>% 
+	summarise_each(funs(sum), contains("above")) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(mean), contains("above")) %>% 
+	select(-contains("height"))
+
+
+min.mean.sd.max <- function(x) {
+	r <- c(min(x), mean(x) - sd(x), mean(x), mean(x) + sd(x), max(x))
+	names(r) <- c("ymin", "lower", "middle", "upper", "ymax")
+	r
+}
+
+
+time_above_thresholds %>% 
+	gather(key = threshold, value = hours, contains("above")) %>% 
+	ungroup() %>% 
+	ggplot(aes(x = substrate, y = hours, color = substrate)) +
+	stat_summary(fun.data = min.mean.sd.max, geom = "boxplot") +
+	facet_wrap( ~ threshold, scales = "free") +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	ylab("Average hours per day above threshold") + xlab("")
+ggsave("figures/time_above_temp_thresholds.pdf", width = 8, height = 5)
+
+
+### let's calculate degree hours, 13C is the average min temperature. 
+
+
+daytime_em %>%
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	mutate(degrees_above = temperature - 13) %>% 
+	group_by(region, site_rename, substrate, month_day, ibutton_id) %>% 
+	summarise_each(funs(sum), degrees_above) %>% 
+	group_by(region, site_rename, substrate, ibutton_id) %>% 
+	summarise_each(funs(mean), degrees_above) %>% 
+	ggplot(aes(x = reorder(site_rename, degrees_above, FUN = "mean", na.rm = TRUE), y = degrees_above, color = substrate)) + geom_boxplot() +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	ylab("Degree hours per day above 13°C") + xlab("Site")
+ggsave("figures/degree_hours.pdf", width = 10, height = 5)
+
+
+
+emersion4 <- left_join(emersion3, daytime_summary)
+emersion5 <- left_join(emersion3, daytime_max)
+
+
+## average daytime emersion temperature
+emersion4 %>% 
+	filter(date > "2012-08-1") %>% 
+	# filter(grepl("Ukie", site)) %>% 
+	ggplot(aes(x = temperature_mean, y = hours_emersed, color = site_rename)) + geom_point(size = 5) +
+	facet_wrap( ~ substrate + region)
+
+emersion4 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	filter(date > "2012-08-1") %>% 
+	ggplot(aes(x = temperature_mean, y = hours_emersed)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	facet_wrap( ~ substrate) + geom_smooth(method = "lm", color = "black") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Average daytime rock temperature (°C)") + ylab("Daytime hours emersed (per day)")
+ggsave("figures/emersion_hours_average_daytime_temperature.pdf", width = 8, height = 4)
+
+
+
+emersion4 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	filter(date > "2012-08-1") %>% 
+	ggplot(aes(x = temperature_mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	# facet_wrap( ~ substrate) +
+	geom_smooth(method = "lm") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Average daytime rock temperature (°C)") + ylab("Daytime hours emersed (per day)") +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/emersion_hours_average_daytime_temp_color.pdf", width = 6, height = 4)
+
+
+emersion4 %>% 
+	filter(date > "2012-08-1") %>%
+	group_by(substrate) %>% 
+	do(tidy(lm(hours_emersed ~ temperature_mean, data = .), conf.int = TRUE)) %>% View
+
+### average daily max
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	filter(date > "2012-08-1") %>%
+	ggplot(aes(x = temperature, y = hours_emersed)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	facet_wrap( ~ substrate) + geom_smooth(method = "lm", color = "black") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Average daily max rock temperature (°C)") + ylab("Daytime hours emersed (per day)")
+ggsave("figures/emersion_hours_temperature.pdf", width = 8, height = 4)
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	filter(date > "2012-08-1") %>%
+	ggplot(aes(x = temperature, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	# facet_wrap( ~ substrate) +
+	geom_smooth(method = "lm") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Average daily max rock temperature (°C)") + ylab("Daytime hours emersed (per day)") +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/emersion_hours_daily_max_temp_color.pdf", width = 6, height = 4)
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	# filter(time_point == "End of summer") %>% 
+	ggplot(aes(x = substrate, y = hours_emersed, color = substrate)) + 
+	# geom_boxplot() +
+	stat_summary(fun.data = min.mean.sd.max, geom = "boxplot") +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	facet_wrap( ~ region + time_point, nrow = 3, ncol = 2) +
+xlab("") + ylab("Daytime hours emersed (per day)") +
+	theme(strip.background = element_rect(colour="white", fill="white")) 
+ggsave("figures/emersion_hours_region_color2.pdf", width = 6, height = 8)
+
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	filter(date > "2012-08-1") %>%
+	ggplot(aes(x = temperature, y = height_above_mllw)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	facet_wrap( ~ substrate, scales = "free") + geom_smooth(method = "lm", color = "black") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Average daily max temperature (°C)") + ylab("Height above MLLW (m)")
+ggsave("figures/height_temperature.pdf", width = 8, height = 4)
+
+
+emersion5 %>% 
+	filter(date > "2012-08-1") %>%
+	group_by(substrate) %>% 
+	do(tidy(lm(hours_emersed ~ temperature, data = .), conf.int = TRUE)) %>% View
+
+
+
+unique(emersion4$temperature_mean)
 
 emersion_noBoulder %>% 
 	ggplot(aes(x = substrate, y = emersion_time_hours, fill = factor(substrate))) + geom_bar(stat = "identity") + 

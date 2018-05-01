@@ -33,7 +33,7 @@ all_i2 <- all_i %>%
 															 Site == "Sooke" ~ "fulford",
 															 Site == "Welbury" ~ "ganges",
 															 Site == "28th" ~ "atkinson",
-															 Site == "Caulfied" ~ "atkinson",
+															 Site == "Caulfield" ~ "atkinson",
 															 Site == "Copper" ~ "atkinson",
 															 Site == "Whyte" ~ "atkinson")) %>% 
 	rename(site_id = site)
@@ -76,6 +76,16 @@ all_temps_tides3 <- all_temps_tides2 %>%
 	mutate(hour = hour(date)) %>%
 	mutate(daytime = ifelse(hour > 7 & hour < 19, "daytime", "nighttime"))
 
+
+
+unique(all_temps_tides2$Site)
+
+all_temps_tides4 <- all_temps_tides3 %>% 
+	mutate(site_rename = str_to_lower(Site)) %>% 
+	mutate(site_rename = ifelse(site_rename == "whyte", "whytecliff", site_rename)) %>% 
+	mutate(site_rename = ifelse(site_rename == "sheepfarm", "sheep", site_rename))
+write_csv(all_temps_tides4, "data-processed/all_temps_w_tides.csv")
+
 all_temps_tides3 %>% 
 	filter(emersed == "emersed" & daytime == "daytime") %>% 
 	ggplot(aes(x = temperature, color = substrate, fill = substrate)) + geom_density(alpha = 0.4) +
@@ -106,7 +116,7 @@ daytime_summary <- daytime_em %>%
 
 daytime_summary %>% 
 	group_by(region) %>% 
-	do(tidy(lm(temperature_mean ~ substrate, data = .), conf.int = TRUE)) 
+	do(tidy(lm(temperature_mean ~ substrate, data = .), conf.int = TRUE)) %>% View
 
 mod <- lm(temperature_mean ~ Site*substrate, data = daytime_summary) 
 anova(mod)
