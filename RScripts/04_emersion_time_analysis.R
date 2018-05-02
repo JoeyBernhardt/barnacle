@@ -178,6 +178,22 @@ daytime_em %>%
 	ylab("Degree hours per day above 13°C") + xlab("Site")
 ggsave("figures/degree_hours.pdf", width = 10, height = 5)
 
+daytime_em %>%
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 35) %>% 
+	mutate(degrees_above = temperature - 35) %>% 
+	group_by(region, site_rename, substrate, month_day, ibutton_id) %>% 
+	summarise_each(funs(sum), degrees_above) %>% 
+	group_by(region, substrate) %>% 
+	summarise_each(funs(mean, std.error), degrees_above) %>% 
+	ggplot(aes(x = reorder(region, degrees_above_mean, FUN = "mean", na.rm = TRUE), y = degrees_above_mean, color = substrate)) + geom_point() +
+	geom_errorbar(aes(ymin = degrees_above_mean - degrees_above_std.error, ymax =  degrees_above_mean + degrees_above_std.error), width = 0.2) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) + 
+	ylab("Degree hours per day above 35°C") + xlab("Site")
+ggsave("figures/degree_hours_35_point.pdf", width = 6, height = 5)
+
 
 
 emersion4 <- left_join(emersion3, daytime_summary)
@@ -275,6 +291,50 @@ xlab("") + ylab("Daytime hours emersed (per day)") +
 	theme(strip.background = element_rect(colour="white", fill="white")) 
 ggsave("figures/emersion_hours_region_color2.pdf", width = 6, height = 8)
 ggsave("figures/emersion_hours_region_color_point.pdf", width = 6, height = 8)
+
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	# filter(time_point == "End of summer") %>% 
+	group_by(substrate, time_point, region, site_rename) %>% 
+	summarise_each(funs(mean), x_max_tide_height) %>% 
+	group_by(substrate, time_point, region) %>% 
+	summarise_each(funs(mean, std.error), x_max_tide_height) %>% 
+	ggplot(aes(x = substrate, y = x_max_tide_height_mean, color = substrate)) + 
+	geom_point(size = 3) + geom_errorbar(aes(ymin = x_max_tide_height_mean - x_max_tide_height_std.error,
+																					 ymax = x_max_tide_height_mean + x_max_tide_height_std.error), width = 0.2) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	facet_wrap( ~ region + time_point, nrow = 3, ncol = 2) +
+	xlab("") + ylab("Proportion of max tide height") +
+	theme(strip.background = element_rect(colour="white", fill="white"))
+ggsave("figures/percent_tide_height_region_color_point.pdf", width = 6, height = 8)
+
+
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	# filter(time_point == "End of summer") %>% 
+	group_by(substrate, time_point, region, site_rename) %>% 
+	summarise_each(funs(mean), height_above_mllw) %>% 
+	group_by(substrate, time_point, region) %>% 
+	summarise_each(funs(mean, std.error), height_above_mllw) %>% 
+	ggplot(aes(x = substrate, y = height_above_mllw_mean, color = substrate)) + 
+	geom_point(size = 3) + geom_errorbar(aes(ymin = height_above_mllw_mean - height_above_mllw_std.error,
+																					 ymax = height_above_mllw_mean + height_above_mllw_std.error), width = 0.2) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	facet_wrap( ~ region + time_point, nrow = 3, ncol = 2) +
+	xlab("") + ylab("Height above MLLW (m)") +
+	theme(strip.background = element_rect(colour="white", fill="white"))
+ggsave("figures/height_mllw_region_color_point.pdf", width = 6, height = 8)
+
 
 
 emersion5 %>% 
