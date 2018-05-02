@@ -135,12 +135,13 @@ time_above_thresholds <- daytime_em %>%
 	mutate(above35 = ifelse(temperature > 35, 1, 0)) %>% 
 	mutate(above40 = ifelse(temperature > 40, 1, 0)) %>% 
 	mutate(above45 = ifelse(temperature > 45, 1, 0)) %>% 
-	gather(key = threshold, value = hours, 19:24) %>% View
-	group_by(site_rename, substrate, month_day, ibutton_id, region) %>% 
-	summarise_each(funs(sum), contains("above")) %>% 
-	group_by(site_rename, substrate, region) %>% 
-	summarise_each(funs(mean, std.error), contains("above")) %>% 
-	select(-contains("height"))
+	gather(key = threshold, value = hours, 19:24) %>% 
+	group_by(site_rename, substrate, month_day, ibutton_id, region, threshold) %>% 
+	summarise_each(funs(sum), hours) %>%
+	group_by(site_rename, substrate, ibutton_id, region, threshold) %>% 
+	summarise_each(funs(mean), hours) %>% 
+	group_by(substrate, threshold) %>%
+	summarise_each(funs(mean, std.error), hours) 
 
 
 min.mean.sd.max <- function(x) {
@@ -150,15 +151,14 @@ min.mean.sd.max <- function(x) {
 }
 
 
-time_above_thresholds %>% View
-	group_by(site_rename, substrate, threshold) %>%
-	
-	ggplot(aes(x = substrate, y = hours, color = substrate)) +
-	stat_summary(fun.data = min.mean.sd.max, geom = "boxplot") +
+time_above_thresholds %>% 
+	ggplot(aes(x = substrate, y = hours_mean, color = substrate)) +
+	geom_point() +
+	geom_errorbar(aes(ymin = hours_mean - hours_std.error, ymax = hours_mean + hours_std.error), width = 0.2) +
 	facet_wrap( ~ threshold, scales = "free") +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
 	ylab("Average hours per day above threshold") + xlab("")
-ggsave("figures/time_above_temp_thresholds.pdf", width = 8, height = 5)
+ggsave("figures/time_above_temp_thresholds.pdf", width = 7, height = 4)
 
 
 ### let's calculate degree hours, 13C is the average min temperature. 
