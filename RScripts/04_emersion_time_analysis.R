@@ -186,13 +186,14 @@ daytime_em %>%
 	mutate(degrees_above = temperature - 35) %>% 
 	group_by(region, site_rename, substrate, month_day, ibutton_id) %>% 
 	summarise_each(funs(sum), degrees_above) %>% 
-	group_by(region, substrate) %>% 
+	group_by(region, site_rename, substrate) %>% 
 	summarise_each(funs(mean, std.error), degrees_above) %>% 
-	ggplot(aes(x = reorder(region, degrees_above_mean, FUN = "mean", na.rm = TRUE), y = degrees_above_mean, color = substrate)) + geom_point() +
+	ggplot(aes(x = reorder(site_rename, degrees_above_mean, FUN = "mean", na.rm = TRUE), y = degrees_above_mean, color = substrate)) + geom_point() +
 	geom_errorbar(aes(ymin = degrees_above_mean - degrees_above_std.error, ymax =  degrees_above_mean + degrees_above_std.error), width = 0.2) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) + 
 	ylab("Degree hours per day above 35°C") + xlab("Site")
 ggsave("figures/degree_hours_35_point.pdf", width = 6, height = 5)
+ggsave("figures/degree_hours_35_point_site.pdf", width = 10, height = 5)
 
 
 

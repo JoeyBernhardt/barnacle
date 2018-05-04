@@ -26,6 +26,23 @@ ws2 <- ws %>%
 
 all_ibs <- left_join(wi2, ws2, by = "id")
 
+dh35 <- all_ibs %>% 
+	filter(temperature > 35) %>% 
+	mutate(dh_35 = temperature - 35) %>%
+	group_by(id) %>% 
+	summarise_each(funs(sum), dh_35)
+
+dh1 <- left_join(dh35, ws2, by = "id")
+
+View(dh1)
+
+dh1 %>% 
+	filter(size < 64000000) %>% 
+	ggplot(aes(x = size, y = dh_35/12)) + geom_point() +
+	ylab("Degree hours above 35°C") + xlab("Rock size (cm^3)")
+ggsave("figures/degree_hours_size_scale.pdf", width = 6, height = 4)
+
+
 thresholds <- all_ibs %>% 
 	mutate(above20 = ifelse(temperature > 20, 1, 0),
 				 above30 = ifelse(temperature > 30, 1, 0),
