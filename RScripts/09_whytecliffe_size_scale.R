@@ -49,6 +49,20 @@ all_ibs %>%
 	ggplot(aes(x = date, y = temperature, color = substrate, group = id)) + geom_point(size = 0.5)
 
 
+heating_rate <- all_ibs %>% 
+	group_by(id, substrate, orientation, verticalness, height) %>% 
+	mutate(temp_lag = temperature - lag(temperature, n = 2)) 
+# %>% 
+	# filter(!is.na(temp_lag)) %>% 
+	# summarise_each(funs(min, max, mean), temp_lag) %>% View
+	# group_by(substrate) %>% 
+	# summarise(mean_increase = mean(max)) ### no difference in heating rate
+
+
+lm(max ~ substrate+height + orientation, data = heating_rate) %>% summary()
+
+heating_rate %>% 
+	ggplot(aes( x= height, y = max, color = substrate)) + geom_point() + geom_smooth()
 
 # find the max heating rate -----------------------------------------------
 
