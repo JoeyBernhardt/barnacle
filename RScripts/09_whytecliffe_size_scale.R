@@ -34,10 +34,12 @@ all_ibs <- left_join(wi2, ws2, by = "id")
 
 ### Do cobbles heat up faster?
 all_ibs %>% 
+	mutate(verticalness = ifelse(verticalness == "h", "horizontal", "vertical")) %>% 
+	mutate(substrate = ifelse(substrate == "C", "cobble", "bench")) %>% 
 	# filter(id %in% c("17C", "11B", "1B", "9C")) %>% 
 	ggplot(aes(x = date, y = temperature, color = height, group = id)) + geom_line() +
 	facet_grid(verticalness ~ substrate) + scale_color_viridis_c()
-ggsave("figures/whytecliffe-temperatures.png", width = 20, height = 15)
+ggsave("figures/whytecliffe-temperatures.png", width = 10, height = 6)
 
 all_ibs %>% 
 	filter(temperature > 20) %>% 
@@ -118,10 +120,14 @@ dh1 <- left_join(ws2, dh35, by = "id")
 View(dh1)
 
 dh1 %>% 
-	group_by(substrate) %>%
+	mutate(dh_35 = dh_35/12) %>% 
+	mutate(dh_35 = ifelse(is.na(dh_35), 0, dh_35)) %>% 
+	group_by(substrate) %>% 
 	summarise_each(funs(mean, std.error), dh_35) %>% 
 	ggplot(aes(x = substrate, y = mean)) + geom_point() +
-	geom_errorbar(aes(ymin = mean - std.error, ymax = mean + std.error))
+	geom_errorbar(aes(ymin = mean - std.error, ymax = mean + std.error), width = 0.2) +
+	ylab("Degree hours above 35°C") + xlab("Substrate")
+ggsave("figures/degree_hours_size_scale_substrate.png", width = 6, height = 4)
 	
 
 dh1 %>% 
@@ -129,7 +135,7 @@ dh1 %>%
 	# filter(size < 64000000) %>% 
 	ggplot(aes(x = log(size), y = dh_35/12, color = height)) + geom_point() +
 	ylab("Degree hours above 35°C") + xlab("Rock size (cm^3)") + scale_color_viridis_c()
-ggsave("figures/degree_hours_size_scale.pdf", width = 6, height = 4)
+ggsave("figures/degree_hours_size_scale.png", width = 6, height = 4)
 
 
 thresholds <- all_ibs %>% 
