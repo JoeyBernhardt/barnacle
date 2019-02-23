@@ -1,5 +1,8 @@
 
-
+library(tidyverse)
+library(lubridate)
+library(cowplot)
+library(plotrix)
 ### whytecliffe size scale
 
 
@@ -26,20 +29,106 @@ ws2 <- ws %>%
 
 all_ibs <- left_join(wi2, ws2, by = "id")
 
+
+
+
+### Do cobbles heat up faster?
+all_ibs %>% 
+	# filter(id %in% c("17C", "11B", "1B", "9C")) %>% 
+	ggplot(aes(x = date, y = temperature, color = height, group = id)) + geom_line() +
+	facet_grid(verticalness ~ substrate) + scale_color_viridis_c()
+ggsave("figures/whytecliffe-temperatures.png", width = 20, height = 15)
+
+all_ibs %>% 
+	filter(temperature > 20) %>% 
+	# filter(date > ymd_hms("2012-08-31 01:56:00")) %>% 
+	# filter(date < ymd_hms("2012-09-01 09:56:00")) %>% 
+	# filter(id %in% c("17C", "11B", "1B", "9C")) %>% 
+	ggplot(aes(x = date, y = temperature, color = substrate, group = id)) + geom_point(size = 0.5)
+
+
+
+# find the max heating rate -----------------------------------------------
+
+C17 <- all_ibs %>% 
+	mutate(start_time = min(date)) %>% 
+	mutate(days = interval(start_time, date)/dhours(1)) %>% 
+	# filter(ID == "17C") %>% 
+	split(.$id)
+
+
+all_ibs2 <- all_ibs %>% 
+	mutate(start_time = min(date)) %>% 
+	mutate(days = interval(start_time, date)/dhours(1)) %>% 
+	ungroup()
+
+example_data <- read_csv(here("data-processed", "nitrate-abundances-processed.csv")) %>% 
+	filter(population != "COMBO") %>% 
+	filter(!is.na(log(RFU)), !is.na(days))
+
+
+example_split <-  example_data %>% 
+	# filter(grepl("C", well_plate)) %>% 
+	split(.$well_plate)
+
+
+### define Nathaniel's fitting function
+nderiv<-function(fit, x, eps=1e-5){(predict(fit, x + eps) - predict(fit, x - eps))/(2 * eps)}
+
+spline.slope <- function(df, n=201, eps=1e-5, span=2){
+	x <- df$days
+	y <- df$temperature
+	time_point <- seq(min(x), max(x), length=n)
+	growth <- nderiv(loess(y ~ x, degree=1, span=span), time_point)
+	output <- top_n(filter(data.frame(growth, time_point), growth > 0), n = 1, wt = growth)
+	return(output)
+}
+
+
+## fit each well
+temperature_example <- C17 %>% 
+	map_df(spline.slope, .id = "id")
+
+all_ibs2 %>% 
+	filter(id == "14B") %>% View
+
+## join the growth rate results back to initial df
+example_results <- left_join(all_ibs2, temperature_example)
+
+example_results %>% 
+	distinct(time_point)
+
+example_results %>% 
+	ggplot(aes(x = substrate, y = growth)) + geom_boxplot()
+
+
+example_results %>% 
+	ggplot(aes( x= days, y = temperature, group = id)) + geom_line() +
+	geom_point(aes(x= time_point, y = temperature, color = substrate), data = example_results) 
+
+
 dh35 <- all_ibs %>% 
 	filter(temperature > 35) %>% 
 	mutate(dh_35 = temperature - 35) %>%
 	group_by(id) %>% 
 	summarise_each(funs(sum), dh_35)
 
-dh1 <- left_join(dh35, ws2, by = "id")
+dh1 <- left_join(ws2, dh35, by = "id")
 
 View(dh1)
 
 dh1 %>% 
-	filter(size < 64000000) %>% 
-	ggplot(aes(x = size, y = dh_35/12)) + geom_point() +
-	ylab("Degree hours above 35°C") + xlab("Rock size (cm^3)")
+	group_by(substrate) %>%
+	summarise_each(funs(mean, std.error), dh_35) %>% 
+	ggplot(aes(x = substrate, y = mean)) + geom_point() +
+	geom_errorbar(aes(ymin = mean - std.error, ymax = mean + std.error))
+	
+
+dh1 %>% 
+	mutate(dh_35 = ifelse(is.na(dh_35), 0, dh_35)) %>% 
+	# filter(size < 64000000) %>% 
+	ggplot(aes(x = log(size), y = dh_35/12, color = height)) + geom_point() +
+	ylab("Degree hours above 35°C") + xlab("Rock size (cm^3)") + scale_color_viridis_c()
 ggsave("figures/degree_hours_size_scale.pdf", width = 6, height = 4)
 
 
@@ -54,20 +143,26 @@ thresholds <- all_ibs %>%
 
 thres <- left_join(thresholds, ws2, by = "id")
 
+
+mod_thres <- lm(above20 ~ height*substrate, data = thres)
+summary(mod_thres)
+
 thres_long <- thres %>% 
 	gather(key = threshold, value = time_points, contains("above"))
 
 
 thres_long %>% 
-	filter(size < 64000000) %>% 
-	ggplot(aes(x = size, y = time_points, color = verticalness)) + geom_point() +
+	# filter(size < 64000000) %>% 
+	filter(threshold == "above35") %>% 
+	mutate(time = (time_points*5)/60) %>% 
+	ggplot(aes(x = log(size), y = time)) + geom_point() +
 	facet_wrap( ~ threshold, scales = "free") 
 
 
 thres_long %>% 
-	filter(size < 1400000) %>% 
+	# filter(size < 1400000) %>% 
 	mutate(time = (time_points*5)/60) %>% 
-	ggplot(aes(x = size, y = time)) + geom_point() +
+	ggplot(aes(x = log(size), y = time)) + geom_point() +
 	geom_smooth(method = "lm", color = "black") +
 	facet_wrap( ~ threshold, scales = "free") +
 	ylab("Time spent above threshold (hours)") + xlab("Rock size (cm^3)")
@@ -79,8 +174,8 @@ mutate(substrate = ifelse(substrate == "C", "Cobble", "Bench")) %>%
 	mutate(time = (time_points*5)/60) %>% 
 	group_by(substrate, threshold) %>% 
 	summarise_each(funs(mean, std.error), time) %>% 
-	ggplot(aes(x = substrate, y = time_mean)) + geom_point() +
-	geom_errorbar(aes(ymin = time_mean - time_std.error, ymax = time_mean + time_std.error), width = 0.2) +
+	ggplot(aes(x = substrate, y = mean)) + geom_point() +
+	geom_errorbar(aes(ymin = mean - std.error, ymax = mean + std.error), width = 0.2) +
 	geom_smooth(method = "lm", color = "black") +
 	facet_wrap( ~ threshold, scales = "free") +
 	ylab("Time spent above threshold (hours)") + xlab("Substrate")
@@ -101,8 +196,8 @@ dm <- all_ibs %>%
 dm2 <- left_join(dm, ws2, by = "id")
 
 dm2 %>% 
-	filter(size < 64000000) %>% 
-	ggplot(aes(x = size, y = temperature)) + geom_point() +
+	# filter(size < 64000000) %>% 
+	ggplot(aes(x = log(size), y = temperature)) + geom_point() +
 	ylab("Average daily max temperature (°C)") + xlab("Rock size (cm^3)")
 
 
@@ -120,6 +215,6 @@ dm3 <- left_join(dh, ws2, by = "id")
 dm3 %>% 
 	filter(size < 64000000) %>% 
 	mutate(dm_height = degrees_above/height) %>% 
-	ggplot(aes(x = size, y = dm_height, color = orientation)) + geom_point(size = 3) +
+	ggplot(aes(x = log(size), y = dm_height, color = orientation)) + geom_point(size = 3) +
 	geom_smooth(method = "lm", color = "black")
 	
