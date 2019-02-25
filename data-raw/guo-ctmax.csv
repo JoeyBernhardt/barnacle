@@ -1,0 +1,5 @@
+acclimation_temp,acclimation_treatment,ct_max
+cold-acclimated,constant,38.56637168
+warm-acclimated,constant,39.84955752
+cold-acclimated,variable,40.88938053
+warm-acclimated,variable,40.31415929

@@ -118,6 +118,17 @@ dh_40 <- daytime_em %>%
 	group_by(site_rename, substrate) %>% 
 	summarise_each(funs(min, mean, max), dh_35)
 
+dh_38.5 <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
+	summarise_each(funs(sum), dh_35) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(min, mean, max), dh_35)
+
 
 dh_35 <- daytime_em %>% 
 	mutate(day = day(date)) %>% 
@@ -165,7 +176,7 @@ daytime_max <- daytime_em %>%
 
 emersion4 <- left_join(emersion3, daytime_summary)
 emersion5 <- left_join(emersion3, daytime_max)
-emersion6 <- left_join(emersion3, dh_40)
+emersion6 <- left_join(emersion3, dh_38.5)
 emersion7 <- left_join(emersion3, dh_35)
 emersion8 <- left_join(emersion3, days_35)
 
@@ -227,18 +238,18 @@ daytime_em %>%
 	mutate(day = day(date)) %>% 
 	mutate(month = month(date)) %>% 
 	unite(month_day, month, day) %>% 
-	filter(temperature > 35) %>% 
-	mutate(degrees_above = temperature - 35) %>% 
+	filter(temperature > 38.6) %>% 
+	mutate(degrees_above = temperature - 38.6) %>% 
 	group_by(region, site_rename, substrate, month_day, ibutton_id) %>% 
 	summarise_each(funs(sum), degrees_above) %>% 
 	group_by(region, site_rename, substrate) %>% 
 	summarise_each(funs(mean, std.error), degrees_above) %>% 
-	ggplot(aes(x = reorder(site_rename, degrees_above_mean, FUN = "mean", na.rm = TRUE), y = degrees_above_mean, color = substrate)) + geom_point() +
-	geom_errorbar(aes(ymin = degrees_above_mean - degrees_above_std.error, ymax =  degrees_above_mean + degrees_above_std.error), width = 0.2) +
+	ggplot(aes(x = reorder(site_rename, mean, FUN = "mean", na.rm = TRUE), y = mean, color = substrate)) + geom_point() +
+	geom_errorbar(aes(ymin = mean - std.error, ymax =  mean + std.error), width = 0.2) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) + 
 	ylab("Degree hours per day above 35°C") + xlab("Site")
 ggsave("figures/degree_hours_35_point.pdf", width = 6, height = 5)
-ggsave("figures/degree_hours_35_point_site.pdf", width = 10, height = 5)
+ggsave("figures/degree_hours_38.5_point_site.pdf", width = 10, height = 5)
 
 
 
@@ -254,7 +265,7 @@ emersion4 %>%
 	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
 															 substrate == "bench" ~ "Bench")) %>% 
 	filter(date > "2012-08-1") %>% 
-	ggplot(aes(x = temperature_mean, y = hours_emersed)) + geom_point(size = 3, alpha = 0.5) +
+	ggplot(aes(x = mean, y = hours_emersed)) + geom_point(size = 3, alpha = 0.5) +
 	geom_point(size = 3, shape = 1) + 
 	facet_wrap( ~ substrate) + geom_smooth(method = "lm", color = "black") +
 	theme(strip.background = element_rect(colour="white", fill="white")) + 
@@ -321,15 +332,17 @@ emersion6 %>%
 	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
 																date < "2012-08-1" ~ "Beginning of summer")) %>% 
 	filter(date > "2012-08-1") %>% 
-	ggplot(aes(x = dh_35_mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
+	ggplot(aes(x = mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
 	geom_point(size = 3, shape = 1) + 
 	# facet_wrap( ~ substrate) +
 	geom_smooth(method = "lm") +
 	theme(strip.background = element_rect(colour="white", fill="white")) + 
-	xlab("Average daily degree hours above 40°C") + ylab("Daytime hours emersed (per day)") +
+	xlab("Average daily degree hours above 38.5°C") + ylab("Daytime hours emersed (per day)") +
 	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
 ggsave("figures/emersion_hours_degree_hours_color_40.pdf", width = 6, height = 4)
+ggsave("figures/emersion_hours_degree_hours_color_38_5.png", width = 6, height = 4)
+
 
 ### degree hours above 35
 emersion7 %>% 

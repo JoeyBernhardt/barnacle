@@ -54,7 +54,7 @@ temperatures <- read_csv("data-raw/cobble_transplant_west_van_ibuttons.csv")
 
 temperatures %>% 
 	ggplot(aes(x = date, y = daily_max_temperature, color = substrate)) + geom_point() + geom_line() +
-	scale_color_viridis_d(begin =0.3, end = 0.9) +ylab("Daily max temperature") + xlab("Date")
+	scale_color_viridis_d(begin =0.5, end = 0.9) +ylab("Daily max temperature") + xlab("Date")
 ggsave("figures/cobble_transplant_temperature.png", height = 6, width = 9)
 
 temperatures %>% 
