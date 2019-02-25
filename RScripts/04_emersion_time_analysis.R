@@ -37,8 +37,8 @@ emersion3 <- emersion2 %>%
 
 
 
-# emersion_noBoulder <- emersion %>% 
-# 	filter(substrate != "boulder")
+emersion_noBoulder <- emersion %>% 
+	filter(substrate != "boulder")
 # 
 # emersion_noBoulder <- emersion_noBoulder %>% 
 # 	mutate(emersion_time_hours = ((total/60)/29)) ## don't know why we divide by 29 here...look back into this
@@ -242,14 +242,16 @@ daytime_em %>%
 	mutate(degrees_above = temperature - 38.6) %>% 
 	group_by(region, site_rename, substrate, month_day, ibutton_id) %>% 
 	summarise_each(funs(sum), degrees_above) %>% 
-	group_by(region, site_rename, substrate) %>% 
+	# group_by(region, site_rename, substrate) %>% 
+	group_by(region, substrate) %>% 
 	summarise_each(funs(mean, std.error), degrees_above) %>% 
-	ggplot(aes(x = reorder(site_rename, mean, FUN = "mean", na.rm = TRUE), y = mean, color = substrate)) + geom_point() +
+	ggplot(aes(x = reorder(region, mean, FUN = "mean", na.rm = TRUE), y = mean, color = substrate)) + geom_point() +
 	geom_errorbar(aes(ymin = mean - std.error, ymax =  mean + std.error), width = 0.2) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) + 
-	ylab("Degree hours per day above 35°C") + xlab("Site")
+	ylab("Degree hours per day above 38.6°C") + xlab("Site") 
+ggsave("figures/degree_hours_38_6_point.pdf", width = 6, height = 5)
 ggsave("figures/degree_hours_35_point.pdf", width = 6, height = 5)
-ggsave("figures/degree_hours_38.5_point_site.pdf", width = 10, height = 5)
+ggsave("figures/degree_hours_38.6_point_site.pdf", width = 10, height = 5)
 
 
 
@@ -533,18 +535,18 @@ all5 <- all4 %>%
 	group_by(substrate, Site, region, ibutton_id, day) %>% 
 	summarise_each(funs(max, mean), temperature) %>% 
 	group_by(substrate, Site, region, ibutton_id) %>% 
-	summarise_each(funs(mean, max), temperature_max) %>% 
+	summarise_each(funs(mean, max), max) %>% 
 	unite(col = "site_substrate", remove = FALSE, Site, substrate)
 
 all5 %>% 
-	ggplot(aes(x = Site, y = temperature_max_mean, color = substrate)) + geom_point()
+	ggplot(aes(x = Site, y = max, color = substrate)) + geom_point()
 
 em2 <- left_join(em, all5, by = c("substrate", "site_substrate"))	
 
 em2 %>% 
 	# filter(isite == "Sheepfarm") %>% 
-	ggplot(aes(x = temperature_max_mean, y = emersion_time_hours, color = substrate.x)) + geom_point() +
-	facet_wrap(~ substrate.x) + geom_smooth(method = "lm") +
+	ggplot(aes(x = max, y = emersion_time_hours, color = substrate.x)) + geom_point() +
+	facet_wrap(~ substrate) + geom_smooth(method = "lm") +
 	xlab("Mean daily max temperature (°C)") + ylab("Daily emersion time (hours)") +
 	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) 
 ggsave("figures/emersion_time_temp.pdf")
@@ -780,7 +782,6 @@ all_change <- all4 %>%
 	mutate(temp_change = temperature - lag(temperature)) %>% 
 	filter(!is.na(temp_change))
 
-?lag
 
 max_change <- all_change %>% 
 	mutate(month = month(date)) %>%
@@ -793,5 +794,21 @@ max_change <- all_change %>%
 max_change %>% 
 	ggplot(aes(x = Site, y = temp_change, color = substrate, fill = substrate)) + geom_boxplot() +
 	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) +
-	scale_fill_viridis(discrete = TRUE, begin = 0.5, end = 0.9)
-	
+	scale_fill_viridis(discrete = TRUE, begin = 0.5, end = 0.9) + ylab("Maximum heating rate (°C/hour)")
+ggsave("figures/heating_rate.png", width = 11, height = 4)
+
+mod2 <- lm(temp_change ~ substrate*Site, data = max_change)
+summary(mod2)	
+
+
+library(lme4)
+
+modm <- lmer(temp_change ~ substrate + (1|Site), data = max_change)
+summary(modm)
+anova(modm)
+
+
+max_change %>% 
+	ggplot(aes(x = substrate, y = temp_change, color = substrate, fill = substrate)) + geom_boxplot() +
+	scale_color_viridis(discrete = TRUE, begin = 0.5, end = 0.9) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.5, end = 0.9) + ylab("Maximum heating rate (°C/hour)")
