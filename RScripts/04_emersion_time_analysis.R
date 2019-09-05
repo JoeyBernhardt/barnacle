@@ -3,6 +3,7 @@ library(broom)
 library(tidyverse)
 library(viridis)
 library(plotrix)
+library(lubridate)
 
 
 # read in data ------------------------------------------------------------
@@ -104,7 +105,9 @@ unique(emersion3$site_rename)
 
 temps <- read_csv("data-processed/all_temps_w_tides.csv")
 daytime_em <- temps %>% 
-	filter(emersed == "emersed" & daytime == "daytime") 
+	filter(emersed == "emersed" & daytime == "daytime") %>% 
+	mutate(region = ifelse(region == "Saltspring", "Gulf Islands", region)) %>% 
+	mutate(region = factor(region, levels = c("Outercoast", "Gulf Islands", "Vancouver")))
 
 
 dh_40 <- daytime_em %>% 
@@ -127,7 +130,29 @@ dh_38.5 <- daytime_em %>%
 	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
 	summarise_each(funs(sum), dh_35) %>% 
 	group_by(site_rename, substrate) %>% 
-	summarise_each(funs(min, mean, max), dh_35)
+	summarise_each(funs(min, mean, max, sum), dh_35)
+
+dh_40 <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 40) %>% 
+	mutate(dh_40 = temperature - 40) %>% 
+	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
+	summarise_each(funs(sum), dh_40) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(min, mean, max, sum), dh_40)
+
+dh_42 <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 42) %>% 
+	mutate(dh_42 = temperature - 42) %>% 
+	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
+	summarise_each(funs(sum), dh_42) %>% 
+	group_by(site_rename, substrate) %>% 
+	summarise_each(funs(min, mean, max, sum), dh_42)
 
 
 dh_35 <- daytime_em %>% 
@@ -139,20 +164,108 @@ dh_35 <- daytime_em %>%
 	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
 	summarise_each(funs(sum), dh_35) %>% 
 	group_by(site_rename, substrate) %>% 
-	summarise_each(funs(min, mean, max), dh_35)
+	summarise_each(funs(min, mean, max, sum), dh_35)
+
+
+daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	# filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
+	group_by(month_day, region, Site, substrate) %>%
+	summarise(sum_dh = sum(dh_35)) %>% 
+	filter(sum_dh > 0) %>% 
+	ggplot(aes(x = sum_dh, fill = substrate)) + geom_density(alpha = 0.5) +
+	facet_wrap(~ Site, scales = "free")
+
+ctmax <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	# filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 35) %>% 
+	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
+	group_by(month_day, region, Site, substrate, ibutton_id) %>%
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(Site, region, substrate) %>% 
+	summarise_each(funs(mean, std.error), sum_dh) 
+
+
+ctmax_raw <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	# filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 35) %>% 
+	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
+	group_by(month_day, region, Site, substrate, ibutton_id) %>% 
+	summarise(sum_dh = sum(dh_35)) 
+
+
+	# filter(sum_dh > 0) %>% 
+	ggplot() + 
+	geom_point(aes(x = substrate, y = sum_dh, color = substrate), data = ctmax_raw, position= position_jitter(width = 0.1), alpha = 0.4 ) + 
+	# geom_point(alpha = 0.5, position = position_jitter(width = 0.1)) +
+	geom_pointrange(aes(x = substrate, y = mean, ymin = mean - std.error, ymax = mean + std.error, color = substrate), data = ctmax, size = 1) +
+		geom_point(aes(x = substrate, y = mean), data = ctmax, size = 4, color = "black", shape = 1) +
+		# geom_errorbar(aes(x = substrate, ymax = mean + std.error, ymin = mean - std.error), width = 0.1, data = ctmax) +
+	facet_wrap(region ~ Site, scales = "free") +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	ylab("Daily degree hours above CTmax (June - August 2012)") + xlab("")
+	
+	ggplot() + 
+		# geom_point(aes(x = substrate, y = sum_dh, color = substrate), data = ctmax_raw, position= position_jitter(width = 0.1), alpha = 0.4 ) + 
+		# geom_point(alpha = 0.5, position = position_jitter(width = 0.1)) +
+		geom_pointrange(aes(x = substrate, y = mean, ymin = mean - std.error, ymax = mean + std.error, color = substrate), 
+										data = ctmax, size = 1) +
+		# geom_point(aes(x = substrate, y = mean), data = ctmax, size = 5, color = "black", shape = 1) +
+		# geom_errorbar(aes(x = substrate, ymax = mean + std.error, ymin = mean - std.error), width = 0.1, data = ctmax) +
+		facet_wrap(region ~ Site, scales = "free") +
+		scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+		ylab("Daily degree hours above CTmax (June - August 2012)") + xlab("")
+	ggsave("figures/degree-hours-ctmax-region.png", width = 8, height = 8)
+
+
+
+
+
+
+
+
+
+daytime_em %>%
+	mutate(minute = 1) %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	mutate(above20 = ifelse(temperature > 20, 1, 0)) %>% 
+	mutate(above25 = ifelse(temperature > 25, 1, 0)) %>% 
+	mutate(above30 = ifelse(temperature > 30, 1, 0)) %>% 
+	mutate(above35 = ifelse(temperature > 35, 1, 0)) %>% 
+	mutate(above40 = ifelse(temperature > 40, 1, 0)) %>% 
+	mutate(above45 = ifelse(temperature > 45, 1, 0)) %>% 
+	gather(key = threshold, value = hours, 19:24) %>% 
+	group_by(site_rename, substrate, month_day, ibutton_id, region, threshold) %>% 
+	summarise_each(funs(sum), hours) %>% 
+	ggplot(aes(x = hours, color = substrate, fill = substrate, group = substrate)) + geom_density() +
+	facet_wrap( ~ threshold, scales = "free")
 
 days_35 <- daytime_em %>% 
 	mutate(day = day(date)) %>% 
 	mutate(month = month(date)) %>% 
 	unite(month_day, month, day) %>% 
 	mutate(above_35 = ifelse(temperature > 35, 1, 0)) %>% 
-	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
+	group_by(site_rename, ibutton_id, substrate, month_day, region) %>% 
 	summarise_each(funs(sum), above_35) %>% 
 	mutate(day_above_35 = ifelse(above_35>0, 1, 0)) %>% 
-	group_by(site_rename, substrate, ibutton_id) %>% 
+	group_by(site_rename, substrate, ibutton_id, region) %>% 
 	summarise_each(funs(sum), day_above_35) %>% 
 	group_by(site_rename, substrate) %>% 
 	summarise_each(funs(mean), day_above_35) 
+
+
 
 
 daytime_summary <- daytime_em %>% 
@@ -173,10 +286,14 @@ daytime_max <- daytime_em %>%
 	group_by(site_rename, substrate) %>% 
 	summarise_each(funs(mean), temperature)
 
+dh_35 %>% View
+
 
 emersion4 <- left_join(emersion3, daytime_summary)
 emersion5 <- left_join(emersion3, daytime_max)
 emersion6 <- left_join(emersion3, dh_38.5)
+emersion6b <- left_join(emersion3, dh_40)
+emersion6c <- left_join(emersion3, dh_42)
 emersion7 <- left_join(emersion3, dh_35)
 emersion8 <- left_join(emersion3, days_35)
 
@@ -260,7 +377,7 @@ ggsave("figures/degree_hours_38.6_point_site.pdf", width = 10, height = 5)
 emersion4 %>% 
 	filter(date > "2012-08-1") %>% 
 	# filter(grepl("Ukie", site)) %>% 
-	ggplot(aes(x = temperature_mean, y = hours_emersed, color = site_rename)) + geom_point(size = 5) +
+	ggplot(aes(x = mean, y = hours_emersed, color = site_rename)) + geom_point(size = 5) +
 	facet_wrap( ~ substrate + region)
 
 emersion4 %>% 
@@ -280,7 +397,7 @@ emersion4 %>%
 	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
 															 substrate == "bench" ~ "Bench")) %>% 
 	filter(date > "2012-08-1") %>% 
-	ggplot(aes(x = temperature_mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
+	ggplot(aes(x = mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
 	geom_point(size = 3, shape = 1) + 
 	# facet_wrap( ~ substrate) +
 	geom_smooth(method = "lm") +
@@ -316,7 +433,7 @@ emersion5 %>%
 															 substrate == "bench" ~ "Bench")) %>% 
 	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
 																date < "2012-08-1" ~ "Beginning of summer")) %>% 
-	filter(date > "2012-08-1") %>%
+	filter(date > "2012-08-1") %>% 
 	ggplot(aes(x = temperature, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
 	geom_point(size = 3, shape = 1) + 
 	# facet_wrap( ~ substrate) +
@@ -336,7 +453,7 @@ emersion6 %>%
 	filter(date > "2012-08-1") %>% 
 	ggplot(aes(x = mean, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
 	geom_point(size = 3, shape = 1) + 
-	# facet_wrap( ~ substrate) +
+	facet_wrap( ~ region) +
 	geom_smooth(method = "lm") +
 	theme(strip.background = element_rect(colour="white", fill="white")) + 
 	xlab("Average daily degree hours above 38.5°C") + ylab("Daytime hours emersed (per day)") +
@@ -344,6 +461,25 @@ emersion6 %>%
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
 ggsave("figures/emersion_hours_degree_hours_color_40.pdf", width = 6, height = 4)
 ggsave("figures/emersion_hours_degree_hours_color_38_5.png", width = 6, height = 4)
+
+emersion7 %>% 
+	mutate(sum = ifelse(is.na(sum), 0.000001, sum)) %>% 
+	# filter(sum > 0.5) %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	filter(date > "2012-08-1") %>% 
+	ggplot(aes(x = mean, y = hours_emersed)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	# scale_x_log10() +
+	# facet_wrap( ~ substrate) +
+	# geom_smooth() +
+	# facet_wrap( ~ region, scales = "free") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Mean daily degree hours above 35°C") + ylab("Daytime hours emersed (per day)") +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
 
 
 ### degree hours above 35
@@ -393,15 +529,33 @@ emersion5 %>%
 	summarise_each(funs(mean), hours_emersed) %>% 
 	group_by(substrate, time_point, region) %>% 
 	summarise_each(funs(mean, std.error), hours_emersed) %>% 
-	ggplot(aes(x = substrate, y = hours_emersed_mean, color = substrate)) + 
-	geom_point(size = 3) + geom_errorbar(aes(ymin = hours_emersed_mean - hours_emersed_std.error,
-																	 ymax = hours_emersed_mean + hours_emersed_std.error), width = 0.2) +
+	ggplot(aes(x = substrate, y = mean, color = substrate)) + 
+	geom_point(size = 3) + geom_errorbar(aes(ymin = mean - std.error,
+																	 ymax = mean + std.error), width = 0.2) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
 	facet_wrap( ~ region + time_point, nrow = 3, ncol = 2) +
 xlab("") + ylab("Daytime hours emersed (per day)") +
 	theme(strip.background = element_rect(colour="white", fill="white")) 
 ggsave("figures/emersion_hours_region_color2.pdf", width = 6, height = 8)
 ggsave("figures/emersion_hours_region_color_point.pdf", width = 6, height = 8)
+
+
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	# filter(time_point == "End of summer") %>% 
+	ggplot(aes(x = substrate, y = hours_emersed, color = substrate)) + 
+	geom_boxplot() +
+	geom_point(position = position_jitter(width = 0.2)) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	facet_grid(region ~ time_point) +
+	ylab("Upper vertical limit \n (Daytime hours emersed per day)") + 
+	theme(legend.position = "none")
+ggsave("figures/emersion_hours_region_color3.pdf", width = 6, height = 8)
+	
+
 
 
 
