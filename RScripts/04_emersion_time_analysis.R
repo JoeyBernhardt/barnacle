@@ -190,8 +190,22 @@ ctmax <- daytime_em %>%
 	group_by(month_day, region, Site, substrate, ibutton_id) %>%
 	summarise(sum_dh = sum(dh_35)) %>% 
 	group_by(Site, region, substrate) %>% 
-	summarise_each(funs(mean, std.error), sum_dh) 
+	summarise_each(funs(mean, std.error), sum_dh)
 
+ctmax1 <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	# filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 35) %>% 
+	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
+	group_by(month_day, region, Site, substrate, ibutton_id) %>%
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(Site, region, substrate) %>% 
+	summarise_each(funs(mean, std.error), sum_dh)
+
+mod3 <- lm(mean ~ substrate, data = ctmax1) 
+summary(mod3)
 
 ctmax_raw <- daytime_em %>% 
 	mutate(day = day(date)) %>% 
@@ -201,8 +215,22 @@ ctmax_raw <- daytime_em %>%
 	mutate(dh_35 = temperature - 35) %>% 
 	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
 	group_by(month_day, region, Site, substrate, ibutton_id) %>% 
-	summarise(sum_dh = sum(dh_35)) 
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(region, Site, substrate, ibutton_id) %>% 
+	top_n(n = 40, wt = month_day) 
 
+ctmax_raw %>% 
+	group_by(region, Site, substrate, ibutton_id) %>% 
+	tally() %>% View
+
+### effect of substrate size on temperatures
+mod1 <- lm(sum_dh ~ substrate*Site, data = ctmax_raw) 
+summary(mod1)
+
+library(lme4)
+
+mod2 <- lmer(sum_dh ~ substrate +  (1|region) + (1|Site), data = ctmax_raw)
+summary(mod2)
 
 	# filter(sum_dh > 0) %>% 
 	ggplot() + 
