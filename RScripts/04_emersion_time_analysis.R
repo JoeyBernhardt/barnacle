@@ -109,6 +109,9 @@ daytime_em <- temps %>%
 	mutate(region = ifelse(region == "Saltspring", "Gulf Islands", region)) %>% 
 	mutate(region = factor(region, levels = c("Outercoast", "Gulf Islands", "Vancouver")))
 
+View(daytime_em)
+
+daytime_summary %>% View
 
 dh_40 <- daytime_em %>% 
 	mutate(day = day(date)) %>% 
@@ -225,7 +228,7 @@ ctmax_raw %>%
 
 ### effect of substrate size on temperatures
 mod1 <- lm(sum_dh ~ substrate*Site, data = ctmax_raw) 
-summary(mod1)
+anova(mod1)
 
 library(lme4)
 
@@ -298,10 +301,31 @@ days_35 <- daytime_em %>%
 
 daytime_summary <- daytime_em %>% 
 	mutate(region = as.character(region)) %>% 
-	group_by(site_rename, substrate) %>% 
-	summarise_each(funs(mean, max, median), temperature) 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	group_by(site_rename, substrate, region, month_day) %>% 
+	summarise(mean_daily_temp = mean(temperature),
+						max_daily_temp = max(temperature)) %>% 
+	group_by(site_rename, substrate, region) %>% 
+	summarise_each(funs(mean, max, median, sd, std.error), mean_daily_temp, max_daily_temp) 
 	
 	View(daytime_summary)
+	
+daytime_summary %>% 
+	ggplot(aes(x = site_rename, y = mean_daily_temp_mean, color = substrate)) + geom_point() +
+	geom_errorbar(aes(x = site_rename, ymin = mean_daily_temp_mean - mean_daily_temp_std.error, ymax = mean_daily_temp_mean + mean_daily_temp_std.error), width = 0.1) +
+	ylab("Mean daytime temperature (°C)") + xlab("Site") +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/mean-daytime-emersed-temperature.png", width = 9, height = 4)
+
+daytime_summary %>% 
+	ggplot(aes(x = site_rename, y = max_daily_temp_mean, color = substrate)) + geom_point() +
+	geom_errorbar(aes(x = site_rename, ymin = max_daily_temp_mean - max_daily_temp_std.error, ymax = max_daily_temp_mean + max_daily_temp_std.error), width = 0.1) +
+	ylab("Max daytime temperature (°C)") + xlab("Site") +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+ggsave("figures/max-daytime-emersed-temperature.png", width = 9, height = 4)
+	
 
 setdiff(unique(emersion4$site_rename),unique(daytime_summary$site_rename))
 
@@ -573,18 +597,31 @@ emersion5 %>%
 															 substrate == "bench" ~ "Bench")) %>% 
 	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
 																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	group_by(site_rename, substrate, region, time_point) %>% 
+	summarise(mean_hours = mean(hours_emersed)) %>% 
 	# filter(time_point == "End of summer") %>% 
-	ggplot(aes(x = substrate, y = hours_emersed, color = substrate)) + 
+	ggplot(aes(x = substrate, y = mean_hours, color = substrate)) + 
 	geom_boxplot() +
 	geom_point(position = position_jitter(width = 0.2)) +
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
-	facet_grid(region ~ time_point) +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	facet_grid(region~ time_point) +
 	ylab("Upper vertical limit \n (Daytime hours emersed per day)") + 
 	theme(legend.position = "none")
-ggsave("figures/emersion_hours_region_color3.pdf", width = 6, height = 8)
+ggsave("figures/emersion_hours_region_color3_mean.pdf", width = 5, height = 8)
 	
 
-
+emersion5 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	group_by(time_point, substrate, site_rename, region) %>% 
+	# filter(site == "CaulfieldCoveVan") %>% View
+	summarise_each(funs(mean, std.error), hours_emersed) %>% 
+	ggplot(aes(x = time_point, y = mean, group = substrate, color = substrate)) + geom_point() + geom_line() +
+	facet_wrap(~ site_rename)
+ggsave("figures/emersion_hours_beg-end-summer.pdf", width = 8, height = 8)
 
 
 emersion5 %>% 
@@ -787,7 +824,7 @@ all4 %>%
 	# filter(day > "2012-08-05", date < "2012-08-15") %>% 
 	group_by(substrate, hour_day) %>% 
 	summarise_each(funs(mean, max), temperature) %>% 
-	ggplot(aes(x = hour_day, y = temperature_max, color = substrate)) + geom_point() +
+	ggplot(aes(x = hour_day, y = max, color = substrate)) + geom_point() +
 	geom_line() +
 	geom_hline(yintercept = 45) +
 	scale_color_viridis(discrete = TRUE, begin = 0.3, end = 0.9) 
@@ -906,6 +943,10 @@ ggplot() + geom_point(aes(color = emersed, x = hour_day, y = temperature, shape 
 	geom_hline(yintercept = 2.036746*5, color = "grey")
 ggsave("figures/sheepfarm_temps_emersion.pdf", width = 20, height = 4)
 
+all_sheep2 %>% 
+	filter(day > "2012-08-10") %>% 
+ ggplot((aes(x = hour_day, y = temperature, color = substrate, group = ibutton_id))) + geom_line()
+	geom_line(aes(color = emersed, x = hour_day, y = temperature, group = ibutton_id)) 
 
 
 sheep_emersed <- all_sheep2 %>% 

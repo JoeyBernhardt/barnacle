@@ -62,3 +62,14 @@ temperatures %>%
 	summarise_each(funs(mean, max), daily_max_temperature) %>% View
 
 
+temperatures %>% 
+	filter(daily_max_temperature > 38.5) %>% 
+	group_by(substrate) %>% 
+	tally()
+
+temperatures %>% 
+	filter(daily_max_temperature > 38.5) %>% 
+	mutate(dd_38 = daily_max_temperature - 38.5) %>% 
+	group_by(substrate) %>% 
+	summarise(total = sum(dd_38))
+
