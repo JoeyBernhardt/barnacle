@@ -73,3 +73,11 @@ temperatures %>%
 	group_by(substrate) %>% 
 	summarise(total = sum(dd_38))
 
+temps_above <- temperatures %>% 
+	# filter(daily_max_temperature > 38.5) %>% 
+	mutate(dd_38 = daily_max_temperature - 38.5) %>% 
+	mutate(dd_38 = ifelse(dd_38 < 0, 0, dd_38))
+
+m <- lm(dd_38 ~ substrate, data = temps_above) 
+visreg(m)
+summary(m)

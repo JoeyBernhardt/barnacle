@@ -130,10 +130,121 @@ dh_38.5 <- daytime_em %>%
 	unite(month_day, month, day) %>% 
 	filter(temperature > 38.5) %>% 
 	mutate(dh_35 = temperature - 38.5) %>% 
-	group_by(site_rename, ibutton_id,substrate, month_day) %>% 
+	group_by(site_rename, ibutton_id,substrate, month_day, region) %>% 
 	summarise_each(funs(sum), dh_35) %>% 
-	group_by(site_rename, substrate) %>% 
+	group_by(site_rename, substrate, region) %>% 
 	summarise_each(funs(min, mean, max, sum), dh_35)
+sd_temps <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>%
+	group_by(site_rename, ibutton_id,substrate, month_day, region) %>% 
+	mutate(sd_temp = sd(temperature)) %>% 
+	mutate(sd_temp = ifelse(is.na(sd_temp), 0, sd_temp)) %>%
+	group_by(site_rename, substrate, region) %>% 
+	summarise_each(funs(mean), sd_temp) %>% 
+	ungroup()
+
+unique(sd_temps$site_rename)
+
+dh_38.5a <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	mutate(monthday = date(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	# mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
+	group_by(site_rename, ibutton_id,substrate, month_day, region, monthday) %>% 
+	summarise_each(funs(sum), dh_35)
+
+
+dh_38.5a %>% 
+	ggplot(aes(x = monthday, y = dh_35, group = ibutton_id, color = substrate)) + geom_line() +
+	facet_wrap( ~ region)
+
+fit <- lmer(dh_35 ~ substrate + (1|site_rename), data= dh_38.5a)
+summary(fit)
+anova(fit)
+
+m <- lme(dh_35 ~ substrate, random =  ~ 1| site_rename, dh_38.5a)
+summary(m)
+anova(m)
+
+m <- lm(dh_35 ~ substrate + site_rename, data = dh_38.5a)
+summary(m)
+anova(m)
+
+
+dh_38.5bb <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	group_by(substrate, month_day, region, site_rename, ibutton_id) %>% 
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(substrate, region, site_rename, ibutton_id) %>% 
+	summarise(sum_dh = sum(sum_dh)) 
+
+View(dh_38.5bb)
+m <- lm(sum_dh ~ substrate + site_rename, data = dh_38.5bb)
+summary(m)
+anova(m)
+m <- lme(sum_dh ~ substrate, random =  ~ 1 + substrate| site_rename, dh_38.5bb)
+m <- lme(sum_dh ~ substrate, random =  ~ 1| site_rename, dh_38.5bb)
+summary(m)
+anova(m)
+visreg(m)
+
+
+visreg(m)
+
+
+dh_38.5b <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	group_by(substrate, month_day, region, site_rename, ibutton_id) %>% 
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(substrate, region, site_rename, ibutton_id) %>% 
+	summarise(mean_dh = mean(sum_dh))
+
+dh_38.5c <- daytime_em %>% 
+	mutate(day = day(date)) %>% 
+	mutate(month = month(date)) %>% 
+	unite(month_day, month, day) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
+	group_by(substrate, month_day, region, site_rename, ibutton_id) %>% 
+	summarise(sum_dh = sum(dh_35)) %>% 
+	group_by(substrate, region, site_rename, ibutton_id) %>% 
+	summarise(mean_dh = mean(sum_dh))
+	
+m4 <- lm(sum_dh ~ substrate*site_rename, data = dh_38.5c)
+summary(m4)
+
+
+library(visreg)
+visreg(m4)
+
+lm(sum_dh ~ substrate + site_rename, data = dh_38.5b) %>% summary()
+lm(mean ~ substrate + site_rename, data = dh_38.5) %>% summary()
+
+library(nlme)
+m <- lme(dh_35 ~ substrate, random =  ~ 1 + substrate| site_rename, dh_38.5b)
+m <- lme(mean_dh ~ substrate, random =  ~ 1 + substrate| site_rename, dh_38.5b)
+m <- lme(sum_dh ~ substrate, random =  ~ 1 + substrate| site_rename, dh_38.5bb)
+m2 <- lme(mean ~ substrate, random =  ~1 + substrate | site_rename, dh_38.5)
+m3 <- lm(mean ~ substrate + region, data = dh_38.5)
+summary(m3)
+summary(m2)
+summary(m)
+anova(m)
+summary(m)
+ranef(m)
 
 dh_40 <- daytime_em %>% 
 	mutate(day = day(date)) %>% 
@@ -187,8 +298,8 @@ ctmax <- daytime_em %>%
 	mutate(day = day(date)) %>% 
 	mutate(month = month(date)) %>% 
 	unite(month_day, month, day) %>% 
-	# filter(temperature > 38.5) %>% 
-	mutate(dh_35 = temperature - 35) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
 	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
 	group_by(month_day, region, Site, substrate, ibutton_id) %>%
 	summarise(sum_dh = sum(dh_35)) %>% 
@@ -199,7 +310,7 @@ ctmax1 <- daytime_em %>%
 	mutate(day = day(date)) %>% 
 	mutate(month = month(date)) %>% 
 	unite(month_day, month, day) %>% 
-	# filter(temperature > 38.5) %>% 
+	filter(temperature > 38.5) %>% 
 	mutate(dh_35 = temperature - 35) %>% 
 	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
 	group_by(month_day, region, Site, substrate, ibutton_id) %>%
@@ -214,8 +325,8 @@ ctmax_raw <- daytime_em %>%
 	mutate(day = day(date)) %>% 
 	mutate(month = month(date)) %>% 
 	unite(month_day, month, day) %>% 
-	# filter(temperature > 38.5) %>% 
-	mutate(dh_35 = temperature - 35) %>% 
+	filter(temperature > 38.5) %>% 
+	mutate(dh_35 = temperature - 38.5) %>% 
 	mutate(dh_35 = ifelse(dh_35 < 0, 0, dh_35)) %>% 
 	group_by(month_day, region, Site, substrate, ibutton_id) %>% 
 	summarise(sum_dh = sum(dh_35)) %>% 
@@ -229,6 +340,7 @@ ctmax_raw %>%
 ### effect of substrate size on temperatures
 mod1 <- lm(sum_dh ~ substrate*Site, data = ctmax_raw) 
 anova(mod1)
+summary(mod1)
 
 library(lme4)
 
@@ -312,6 +424,9 @@ daytime_summary <- daytime_em %>%
 	
 	View(daytime_summary)
 	
+	lm(mean_daily_temp_mean ~ substrate*region, data = daytime_summary) %>% summary()
+	lm(max_daily_temp_mean ~ substrate*region, data = daytime_summary) %>% summary()
+	
 daytime_summary %>% 
 	ggplot(aes(x = site_rename, y = mean_daily_temp_mean, color = substrate)) + geom_point() +
 	geom_errorbar(aes(x = site_rename, ymin = mean_daily_temp_mean - mean_daily_temp_std.error, ymax = mean_daily_temp_mean + mean_daily_temp_std.error), width = 0.1) +
@@ -348,6 +463,10 @@ emersion6b <- left_join(emersion3, dh_40)
 emersion6c <- left_join(emersion3, dh_42)
 emersion7 <- left_join(emersion3, dh_35)
 emersion8 <- left_join(emersion3, days_35)
+emersion8b <- left_join(emersion3, days_35)
+emersion9 <- left_join(emersion3, sd_temps)
+emersion6bc <- left_join(emersion3, dh_40)
+
 
 time_above_thresholds <- daytime_em %>%
 	mutate(minute = 1) %>% 
@@ -513,6 +632,25 @@ emersion6 %>%
 	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
 ggsave("figures/emersion_hours_degree_hours_color_40.pdf", width = 6, height = 4)
 ggsave("figures/emersion_hours_degree_hours_color_38_5.png", width = 6, height = 4)
+
+
+
+
+emersion9 %>% 
+	mutate(substrate = case_when(substrate == "cobble" ~"Cobble",
+															 substrate == "bench" ~ "Bench")) %>% 
+	mutate(time_point = case_when(date > "2012-08-1" ~ "End of summer",
+																date < "2012-08-1" ~ "Beginning of summer")) %>% 
+	filter(date > "2012-08-1") %>% 
+	ggplot(aes(x = sd_temp, y = hours_emersed, color = substrate, fill = substrate)) + geom_point(size = 3, alpha = 0.5) +
+	geom_point(size = 3, shape = 1) + 
+	# facet_wrap( ~ region) +
+	geom_smooth(method = "lm") +
+	theme(strip.background = element_rect(colour="white", fill="white")) + 
+	xlab("Temperature SD") + ylab("Daytime hours emersed (per day)") +
+	scale_fill_viridis(discrete = TRUE, begin = 0.7, end = 0.9) +
+	scale_color_viridis(discrete = TRUE, begin = 0.7, end = 0.9)
+
 
 emersion7 %>% 
 	mutate(sum = ifelse(is.na(sum), 0.000001, sum)) %>% 
