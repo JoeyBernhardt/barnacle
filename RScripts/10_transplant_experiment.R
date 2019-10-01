@@ -29,20 +29,38 @@ surv_change <- cobble2 %>%
 	spread(key = date, value = mean_percent_alive) %>% 
 	mutate(survive_change = t1 - t0) 
 
-all_surv <- left_join(surv_change, cobble2)
-
-all_surv %>% 
+all_surv <- left_join(surv_change, cobble2) %>% 
+	# filter(height_level == "low") %>% 
 	ungroup() %>% 
 	mutate(height_level = ifelse(height_level == "high", "High shore", "Low shore")) %>% 
-	mutate(treatment = case_when(treatment == "c" ~ "concrete",
+	mutate(treatment = case_when(treatment == "c" ~ "thermally integrated",
 															 treatment == "ct" ~ "bench control",
-															 treatment == "v" ~ "vexar cobble")) %>% 
-	ggplot(aes(x = reorder(treatment, -survive_change), y = survive_change, fill = treatment)) + geom_boxplot() + 
- facet_wrap( ~ height_level) + ylab("Percent change in abundance") +xlab("Treatment") + scale_fill_viridis_d(begin =0.3, end = 0.9)
-ggsave("figures/cobble_transplant.png", height = 6, width = 9)
+															 treatment == "v" ~ "thermally isolated")) %>% 
+	# mutate(treatment = factor(treatment, levels = c("bench control", "concrete", "vexar cobble"))) %>% 
+	filter(treatment != "bench control") %>% 
+	distinct(survive_change, .keep_all = TRUE)
 
-mod_surv <- lm(survive_change ~ treatment*height_level, data = all_surv)
+str(all_surv)
+
+all_surv %>% 
+	group_by(treatment, height_level) %>% 
+	# summarise_each(funs(mean, std.error), survive_change) %>% 
+	mutate(mean = mean(survive_change),
+				 std.error = std.error(survive_change)) %>% 
+	ggplot(aes(x = treatment, y = survive_change, fill = treatment, color = treatment)) + geom_jitter(width = 0.1) + 
+	geom_point(aes(x = treatment, y = mean), size = 3) +
+	geom_errorbar(aes(x = treatment, ymin = mean - std.error, ymax = mean + std.error), width = 0.1) +
+ facet_wrap( ~ height_level) + ylab("Summer mortality \n (% change in abundance)") +
+	xlab("Treatment") + scale_color_viridis_d(begin =0.3, end = 0.9) +
+	theme(legend.position = "none")
+ggsave("figures/cobble_transplant.png", height = 4, width = 8)
+
+mod_surv <- aov(survive_change ~ treatment*height_level, data = all_surv)
 summary(mod_surv)
+
+mod_surv2 <- lm(survive_change ~ treatment, data = all_surv)
+summary(mod_surv2)
+TukeyHSD(mod_surv2)
 
 unique(cobble_data$treatment)
 
